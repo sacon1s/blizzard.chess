@@ -17,7 +17,7 @@ export interface OGame {
   tc: string; base: number; inc: number; speed: Speed; rated: boolean; created: number; host?: string;
   moves?: string;
   clock: { w: number; b: number; last: number };
-  status: 'open' | 'started' | 'over' | 'aborted';
+  status: 'open' | 'started' | 'over' | 'aborted'; invited?: string;
   result?: '1-0' | '0-1' | '1/2-1/2'; reason?: string;
   drawOffer?: string | null;
   left?: Record<string, number>;
@@ -98,12 +98,12 @@ export function watchSeeks(cb: (counts: Record<string, number>) => void) {
 }
 
 // ---------------------------------------------------------------- партия с другом по ссылке (без рейтинга)
-export async function createFriendGame(tc: string, me: Profile, color: 'white' | 'black' | 'random'): Promise<string> {
+export async function createFriendGame(tc: string, me: Profile, color: 'white' | 'black' | 'random', invited?: string): Promise<string> {
   const white = color === 'white' || (color === 'random' && Math.random() < 0.5);
   const sp = speedOf(parseTcStr(tc).base, parseTcStr(tc).inc);
   const gref = push(ref(db, 'games'));
   const seat = white ? { white: me.uid, wName: me.name, wRating: ratingOf(me, sp) } : { black: me.uid, bName: me.name, bRating: ratingOf(me, sp) };
-  await set(gref, { ...newGameData(tc, false), ...seat, host: me.uid, status: 'open' });
+  await set(gref, { ...newGameData(tc, false), ...seat, host: me.uid, status: 'open', ...(invited ? { invited } : {}) });
   return gref.key!;
 }
 export function joinGame(gid: string, me: Profile) {

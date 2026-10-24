@@ -2,7 +2,12 @@
   "rules": {
     "users": {
       ".read": true,
-      ".indexOn": ["ratings/bullet", "ratings/blitz", "ratings/rapid", "ratings/classical"],
+      ".indexOn": [
+        "ratings/bullet",
+        "ratings/blitz",
+        "ratings/rapid",
+        "ratings/classical"
+      ],
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "newData.hasChildren(['name', 'ratings'])"
@@ -16,11 +21,15 @@
     },
     "online": {
       ".read": true,
-      "$uid": { ".write": "auth != null && auth.uid === $uid" }
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
     },
     "seeks": {
       ".read": "auth != null",
-      "$tc": { ".write": "auth != null" }
+      "$tc": {
+        ".write": "auth != null"
+      }
     },
     "matches": {
       "$uid": {
@@ -38,7 +47,34 @@
       "$uid": {
         ".read": true,
         ".write": "auth != null && auth.uid === $uid",
-        ".indexOn": ["date"]
+        ".indexOn": [
+          "date"
+        ]
+      }
+    },
+    "friends": {
+      "$uid": {
+        ".read": true,
+        "$other": {
+          ".write": "auth != null && (auth.uid === $uid || (auth.uid === $other && (!newData.exists() || root.child('friendRequests').child(auth.uid).child($uid).exists())))"
+        }
+      }
+    },
+    "friendRequests": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".read": "auth != null && (auth.uid === $from || auth.uid === $to)",
+          ".write": "auth != null && (auth.uid === $from || auth.uid === $to)"
+        }
+      }
+    },
+    "challenges": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$gid": {
+          ".write": "auth != null"
+        }
       }
     }
   }

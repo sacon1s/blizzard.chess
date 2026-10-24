@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import Board from '../components/Board';
 import { PlayerBar, MoveList, NavButtons, useArrowKeys } from '../components/GameParts';
 import { Icon } from '../components/icons';
-import { BotAvatar } from './Bots';
+import { BotAvatar } from '../components/BotAvatar';
 import { E, START_FEN, newPos, play, gameEnd, posAt, resultText, type MoveRec, type GameEnd } from '../lib/chess';
 import { bot, analyst } from '../lib/engine';
 import { playSound, soundFor } from '../lib/sound';

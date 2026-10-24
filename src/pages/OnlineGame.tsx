@@ -10,6 +10,7 @@ import { useSettings, saveGame } from '../lib/store';
 import { playSound, soundFor } from '../lib/sound';
 import { materialDiff } from './BotGame';
 import { go } from '../lib/router';
+import { dropChallenge } from '../lib/social';
 
 export default function OnlineGame({ id }: { id?: string }) {
   const [g, setG] = useState<OGame | null | undefined>(undefined);
@@ -46,7 +47,7 @@ function Invite({ g }: { g: OGame }) {
   return (
     <div className="page narrow invite">
       <h1>{host ? 'Waiting for your friend' : `${hostName} challenges you`}</h1>
-      <p className="muted">{tcName(g.tc)} · {SPEED_LABEL[g.speed]} · casual (no rating change). {host ? 'Send this link. The game starts when your friend opens it and joins.' : ''}</p>
+      <p className="muted">{tcName(g.tc)} · {SPEED_LABEL[g.speed]} · casual (no rating change). {host ? (g.invited ? 'Challenge sent. The game starts when your friend accepts it. You can also send this link.' : 'Send this link. The game starts when your friend opens it and joins.') : ''}</p>
       {host ? (
         <>
           <div className="copy-row">
@@ -54,7 +55,7 @@ function Invite({ g }: { g: OGame }) {
             <button className="btn primary" onClick={() => navigator.clipboard.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600); }, () => {})}><Icon.copy />{copied ? 'Copied' : 'Copy'}</button>
           </div>
           <span className="waiting" aria-hidden="true"><i /><i /><i /></span>
-          <button className="btn ghost" onClick={() => abort(g.id).then(() => go('/'))}>Cancel challenge</button>
+          <button className="btn ghost" onClick={() => { if (g.invited) dropChallenge(g.invited, g.id).catch(() => {}); abort(g.id).then(() => go('/')); }}>Cancel challenge</button>
         </>
       ) : !user ? (
         <button className="btn primary big" onClick={() => go('/login')}>Sign in to play</button>
@@ -62,7 +63,7 @@ function Invite({ g }: { g: OGame }) {
         <button className="btn primary big" onClick={() => go('/login')}>Choose a username to play</button>
       ) : (
         <>
-          <button className="btn primary big" onClick={() => joinGame(g.id, profile).then((r) => { if (!r.committed) setErr('Someone else already joined this game.'); }, () => setErr('Couldn’t join. Check your connection.'))}>Join the game</button>
+          <button className="btn primary big" onClick={() => joinGame(g.id, profile).then((r) => { dropChallenge(profile.uid, g.id).catch(() => {}); if (!r.committed) setErr('Someone else already joined this game.'); }, () => setErr('Couldn’t join. Check your connection.'))}>Join the game</button>
           {err && <p className="error" role="alert">{err}</p>}
         </>
       )}

@@ -1,95 +1,58 @@
-// Разбор партии: движок оценивает каждую позицию, ходы получают оценки, тренер объясняет ошибки.
+// Разбор партии (открывается из профиля или после партии): движок оценивает каждую позицию, ходы получают оценки, тренер объясняет ошибки.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Board from '../components/Board';
 import { MoveList, NavButtons, useArrowKeys, EvalBar, PlayerBar } from '../components/GameParts';
 import { Icon } from '../components/icons';
 import ClsSvg, { CLS_LABEL as MOVE_CLASS_LABELS } from '../components/ClsIcon';
-import { newPos, moveNumber, toPgn, REASONS } from '../lib/chess';
+import { START_FEN, newPos, moveNumber, toPgn, REASONS } from '../lib/chess';
+import { ref, get } from 'firebase/database';
+import { db } from '../lib/firebase';
+import { useAuth } from '../lib/auth';
 import { analyst } from '../lib/engine';
-import { buildMoves, entryFromInfo, terminalEntry, classifyAll, accuracy, counts, fmtEval, winPct, coachComment, parseInput, perfRating, type Entry, type Cls } from '../lib/review';
-import { useSettings, savedGames, getGame, saveGame, newId, cacheGet, cacheSet, type SavedGame } from '../lib/store';
+import { buildMoves, entryFromInfo, terminalEntry, classifyAll, accuracy, counts, fmtEval, winPct, coachComment, perfRating, type Entry, type Cls } from '../lib/review';
+import { useSettings, getGame, cacheGet, cacheSet, type SavedGame } from '../lib/store';
 import { playSound, soundFor } from '../lib/sound';
 import { go } from '../lib/router';
 
 export default function Review({ id }: { id?: string }) {
-  if (!id) return <ReviewHome />;
-  const g = getGame(id);
-  if (!g) {
+  const { user } = useAuth();
+  const [g, setG] = useState<SavedGame | null | undefined>(() => (id ? getGame(id) || undefined : null));
+  useEffect(() => {
+    if (!id) { go('/'); return; }
+    const local = getGame(id);
+    if (local) { setG(local); return; }
+    // партия онлайн из профиля: берём из базы
+    let alive = true;
+    setG(undefined);
+    get(ref(db, 'games/' + id)).then((snap) => {
+      if (!alive) return;
+      if (!snap.exists()) { setG(null); return; }
+      const v = snap.val();
+      if (v.status === 'started' || v.status === 'open') { go('/game/' + id); return; }
+      if (v.status !== 'over' || !v.moves) { setG(null); return; }
+      const ms: string[] = v.moves.split(' ');
+      const b = buildMoves(START_FEN, ms);
+      const color = user && v.white === user.uid ? 0 : user && v.black === user.uid ? 1 : undefined;
+      setG({
+        id, date: new Date(v.created || Date.now()).toISOString(), white: v.wName || 'White', black: v.bName || 'Black', startFen: START_FEN,
+        moves: ms, sans: b.moves.map((m) => m.san), result: v.result || '*', reason: v.reason || '', source: 'online', playerColor: color,
+        event: `${v.rated ? 'Rated' : 'Casual'} game`,
+      });
+    }, () => alive && setG(null));
+    return () => { alive = false; };
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!id) return null;
+  if (g === undefined) return <div className="page narrow"><p className="muted">Loading the game…</p></div>;
+  if (g === null) {
     return (
       <div className="page narrow">
         <h1>Game not found</h1>
-        <p className="muted">Reviews are kept in this browser. This game isn’t here, so paste its PGN instead.</p>
-        <button className="btn primary" onClick={() => go('/review')}>Review a game</button>
+        <p className="muted">This game doesn’t exist or hasn’t finished yet.</p>
+        <button className="btn primary" onClick={() => go('/')}>Play</button>
       </div>
     );
   }
   return <ReviewGame key={id} game={g} />;
-}
-
-function ReviewHome() {
-  const [text, setText] = useState('');
-  const [err, setErr] = useState('');
-  const games = savedGames();
-  function start() {
-    const r = parseInput(text);
-    if (r.error) { setErr(r.error); return; }
-    if (!r.moves.length) { setErr('No moves found. Paste a PGN with moves, or open a FEN in Analysis.'); return; }
-    const b = buildMoves(r.startFen, r.moves);
-    if (b.error) { setErr(b.error); return; }
-    const h = r.headers;
-    const g: SavedGame = {
-      id: newId(), date: new Date().toISOString(), white: h.White || 'White', black: h.Black || 'Black', startFen: r.startFen,
-      moves: r.moves, sans: b.moves.map((m) => m.san), result: (b.end && b.end.result) || r.result || '*', reason: b.end ? b.end.reason : '',
-      source: 'import', event: h.Event,
-    };
-    saveGame(g);
-    go('/review/' + g.id);
-  }
-  return (
-    <div className="page">
-      <header className="page-head">
-        <h1>Game review</h1>
-        <p>The engine rates every move, finds your mistakes and shows what was better.</p>
-      </header>
-      <div className="review-home">
-        <section className="import">
-          <label htmlFor="pgn" className="label">Paste a PGN</label>
-          <textarea id="pgn" value={text} onChange={(e) => { setText(e.target.value); setErr(''); }} spellCheck={false}
-            placeholder={'1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 …\n\nGames from chess.com and lichess work too.'} />
-          {err && <p className="error" role="alert">{err}</p>}
-          <button className="btn primary big" onClick={start} disabled={!text.trim()}><Icon.review />Start review</button>
-        </section>
-        <section className="recent">
-          <h2 className="label">Your recent games</h2>
-          {games.length === 0 ? (
-            <div className="empty">
-              <p>Games you finish here appear in this list.</p>
-              <button className="btn" onClick={() => go('/bots')}><Icon.bot />Play a bot</button>
-            </div>
-          ) : (
-            <ul className="game-list">
-              {games.map((g) => <GameRow key={g.id} g={g} />)}
-            </ul>
-          )}
-        </section>
-      </div>
-    </div>
-  );
-}
-
-export function GameRow({ g }: { g: SavedGame }) {
-  const me = g.playerColor;
-  const res = g.result === '1/2-1/2' ? 'draw' : me === undefined ? '' : (g.result === '1-0') === (me === 0) ? 'win' : g.result === '*' ? '' : 'loss';
-  const d = new Date(g.date);
-  return (
-    <li>
-      <a href={'#/review/' + g.id} className="game-row">
-        <span className={'res ' + res}>{g.result === '1/2-1/2' ? '½' : g.result === '1-0' ? '1–0' : g.result === '0-1' ? '0–1' : '*'}</span>
-        <span className="players"><b>{g.white}</b><span>{g.black}</span></span>
-        <span className="meta">{Math.ceil(g.moves.length / 2)} moves<br />{d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
-      </a>
-    </li>
-  );
 }
 
 const VERDICT: Record<string, string> = {
