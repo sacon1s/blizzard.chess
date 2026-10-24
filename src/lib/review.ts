@@ -92,11 +92,24 @@ export function fmtEval(e: Entry | null | undefined, short = true): string {
   return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(short && Math.abs(v) >= 10 ? 0 : short ? 1 : 2);
 }
 
-// примерный рейтинг игры по точности (грубая шкала, как ориентир)
-export function perfRating(acc: number | null): number | null {
-  if (acc === null) return null;
-  const r = 400 + (acc - 40) * 45 + Math.max(0, acc - 85) * 50;
-  return Math.max(250, Math.min(3000, Math.round(r / 50) * 50));
+// рейтинг игры: по средней потере на ход (в сотых пешки, оценки обрезаны до ±10 пешек, ходы из книги не считаются).
+// Шкала подобрана по партиям игроков разной силы: ~15 → 2600, ~30 → 2200, ~50 → 1700, ~80 → 1200, ~120 → 750.
+// Нужно хотя бы 10 своих ходов вне дебютной книги, иначе оценка ненадёжна.
+export function gameRatings(moves: RMove[], entries: (Entry | null)[]): { white: number | null; black: number | null } {
+  const loss: number[][] = [[], []];
+  const cl = (e: Entry) => (e.mate !== null ? (e.mate > 0 ? 1000 : -1000) : Math.max(-1000, Math.min(1000, e.cp || 0)));
+  moves.forEach((m, k) => {
+    const a = entries[k], b = entries[k + 1];
+    if (!a || !b || m.book) return;
+    const s = m.color === 0 ? 1 : -1;
+    loss[m.color].push(Math.max(0, (cl(a) - cl(b)) * s));
+  });
+  const r = (xs: number[]) => {
+    if (xs.length < 10) return null;
+    const acpl = xs.reduce((x, y) => x + y, 0) / xs.length;
+    return Math.max(100, Math.min(3200, Math.round((3100 * Math.exp(-0.0118 * acpl)) / 50) * 50));
+  };
+  return { white: r(loss[0]), black: r(loss[1]) };
 }
 
 // комментарий тренера к ходу k

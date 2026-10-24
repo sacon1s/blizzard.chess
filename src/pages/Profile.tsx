@@ -5,6 +5,7 @@ import { userGames, SPEED_LABEL, tcName, type UserGame } from '../lib/online';
 import { useFriendState, useFriends, useRequests, useOnlineSet, sendRequest, cancelRequest, acceptRequest, declineRequest, removeFriend } from '../lib/social';
 import { savedGames } from '../lib/store';
 import { go } from '../lib/router';
+import { Icon } from '../components/icons';
 
 export function UserGameList({ games, empty }: { games: (UserGame & { id: string })[]; empty: string }) {
   if (!games.length) return <p className="muted small">{empty}</p>;
@@ -33,9 +34,14 @@ function FriendButton({ me, other }: { me: P; other: P }) {
   const run = (f: () => Promise<unknown>) => { setBusy(true); f().catch(() => {}).finally(() => setBusy(false)); };
   if (st === null) return null;
   if (st === 'friends') {
-    return confirm
-      ? <button className="btn danger" disabled={busy} onClick={() => run(() => removeFriend(me.uid, other.uid))}>Remove from friends</button>
-      : <button className="btn" onClick={() => { setConfirm(true); setTimeout(() => setConfirm(false), 3000); }}>Friends ✓</button>;
+    return (
+      <div className="row">
+        <button className="btn primary" onClick={() => go(`/?tab=friends&with=${other.uid}`)}><Icon.online />Play</button>
+        {confirm
+          ? <button className="btn danger" disabled={busy} onClick={() => run(() => removeFriend(me.uid, other.uid))}>Remove from friends</button>
+          : <button className="btn" onClick={() => { setConfirm(true); setTimeout(() => setConfirm(false), 3000); }}>Friends ✓</button>}
+      </div>
+    );
   }
   if (st === 'sent') return <button className="btn" disabled={busy} onClick={() => run(() => cancelRequest(me.uid, other.uid))}>Cancel friend request</button>;
   if (st === 'received') {
@@ -75,6 +81,7 @@ function MySocial({ me }: { me: P }) {
           <div key={f.uid} className="friend-row">
             <i className={'dot' + (onlineSet.has(f.uid) ? ' on' : '')} />
             <a href={'#/profile/' + f.name}>{f.name}</a>
+            <button className="btn small-btn" onClick={() => go(`/?tab=friends&with=${f.uid}`)}>Play</button>
           </div>
         ))}
       </section>

@@ -71,7 +71,7 @@ function Rail({ section }: { section: string }) {
       </div>
       <div className="rail-foot">
         {profile && <Search />}
-        <a href="#/settings" className={'rail-item' + (section === 'settings' ? ' on' : '')}><Icon.gear /><span>Settings</span></a>
+        <a href="#/settings" className={'rail-item icon-only' + (section === 'settings' ? ' on' : '')} aria-label="Settings" title="Settings"><Icon.gear /></a>
         <a href={'#' + me} className={'rail-item' + (section === 'profile' || section === 'login' ? ' on' : '')}>
           <Icon.user /><span>{profile ? profile.name : user ? 'Account' : 'Sign in'}</span>
           {requests.length > 0 && <i className="badge-dot" aria-label={`${requests.length} friend requests`} />}

@@ -95,7 +95,8 @@ function Live({ g }: { g: OGame }) {
   const fen = shown === 0 ? START_FEN : moves[shown - 1].fenAfter;
   const sideToMove = (N & 1) as 0 | 1;
   const liveFen = N === 0 ? START_FEN : moves[N - 1].fenAfter;
-  const [premove, setPremove] = useState<string | null>(null);
+  const [premoves, setPremoves] = useState<string[]>([]);
+  const onPremove = (u: string | null) => setPremoves((l) => (u ? [...l, u] : []));
 
   // звук чужого хода
   const lastN = useRef(N);
@@ -138,19 +139,23 @@ function Live({ g }: { g: OGame }) {
     }
   }, [g.status, g.settled && uid ? g.settled[uid] : undefined]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onMove = (uci: string) => {
-    if (myColor === null || !live || sideToMove !== myColor || pending) return;
+  const onMove = (uci: string): boolean => {
+    if (myColor === null || !live || sideToMove !== myColor || pending) return false;
     const p = newPos(liveFen), rec = play(p, uci);
-    if (!rec) return;
+    if (!rec) return false;
     setPending(rec.uci); setView(-1);
     playSound(soundFor(rec));
     sendMove(g.id, rec.uci, myColor).then((r) => { if (!r.committed) setPending(null); }, () => setPending(null));
+    return true;
   };
   // предход: как только соперник сходил, сыграть его (если ход легален)
   useEffect(() => {
-    if (!premove) return;
-    if (!live) { setPremove(null); return; }
-    if (myColor !== null && sideToMove === myColor && !pending) { const u = premove; setPremove(null); onMove(u); }
+    if (!premoves.length) return;
+    if (!live) { setPremoves([]); return; }
+    if (myColor !== null && sideToMove === myColor && !pending) {
+      const [u, ...rest] = premoves;
+      setPremoves(onMove(u) ? rest : []);
+    }
   }, [N, live]); // eslint-disable-line react-hooks/exhaustive-deps
   const onView = useCallback((i: number) => setView(i >= N ? -1 : Math.max(0, i)), [N]);
   useArrowKeys(shown, N, onView);
@@ -176,7 +181,7 @@ function Live({ g }: { g: OGame }) {
       <div className="board-col">
         <PlayerBar color={top} name={nameOf(top)} sub={subOf(top)} avatar={<Icon.user />} clock={clockOf(top)} running={live && nMoves >= 2 && sideToMove === top} />
         <Board fen={fen} orientation={orient} movable={myColor !== null && live && shown === N && !pending ? myColor : null}
-          premovable={myColor !== null && live && shown === N && s.premove ? myColor : null} premove={premove} onPremove={setPremove}
+          premovable={myColor !== null && live && shown === N && s.premove ? myColor : null} premoves={premoves} onPremove={onPremove}
           lastMove={shown > 0 ? moves[shown - 1] : null} animate onMove={onMove} theme={s.theme} coords={s.showCoords} autoQueen={s.autoQueen} />
         <PlayerBar color={bottom} name={nameOf(bottom)} sub={subOf(bottom)} avatar={<Icon.user />} clock={clockOf(bottom)} running={live && nMoves >= 2 && sideToMove === bottom} />
       </div>

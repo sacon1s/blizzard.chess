@@ -24,7 +24,8 @@ export default function Play({ initialTab }: { initialTab?: Tab }) {
   const { user, profile, loading } = useAuth();
   const { query } = useRoute();
   const [tab, setTab] = useState<Tab>(() => initialTab || ((query.get('tab') as Tab) || 'online'));
-  useEffect(() => { if (initialTab) setTab(initialTab); }, [initialTab]);
+  const qTab = query.get('tab') as Tab | null;
+  useEffect(() => { if (initialTab) setTab(initialTab); else if (qTab) setTab(qTab); }, [initialTab, qTab]);
   const [seeking, setSeeking] = useState<string | null>(null);
   const [cancel, setCancel] = useState<(() => void) | null>(null);
   const [err, setErr] = useState('');
@@ -153,6 +154,11 @@ function FriendsTab() {
   const [q, setQ] = useState('');
   const [found, setFound] = useState<{ uid: string; name: string }[] | null>(null);
   const [err, setErr] = useState('');
+  const { query } = useRoute();
+  const qWith = query.get('with');
+  const [withUid, setWith] = useState<string | null>(qWith);
+  useEffect(() => { if (qWith) setWith(qWith); }, [qWith]);
+  const sel = (friends || []).find((f) => f.uid === withUid) || null;
   useEffect(() => {
     if (!q.trim()) { setFound(null); return; }
     const t = setTimeout(() => searchPlayers(q).then(setFound, () => setFound([])), 250);
@@ -170,6 +176,13 @@ function FriendsTab() {
   if (!loading && !profile) return <SignInNote signedIn={!!user} text="Sign in to add friends and challenge them." />;
   return (
     <>
+      {sel && (
+        <div className="vs-friend">
+          <i className={'dot' + (onlineSet.has(sel.uid) ? ' on' : '')} />
+          <span>Game with <b>{sel.name}</b></span>
+          <button className="btn ghost small-btn" onClick={() => setWith(null)}>Change</button>
+        </div>
+      )}
       <div className="field">
         <span className="label">Time control</span>
         <div className="seg">
@@ -189,10 +202,10 @@ function FriendsTab() {
         {friends === null ? <p className="muted small">Loading…</p> : sorted.length === 0 ? (
           <p className="muted small">No friends yet. Find players below and add them.</p>
         ) : sorted.map((f) => (
-          <div key={f.uid} className="friend-row">
+          <div key={f.uid} className={'friend-row' + (sel && sel.uid === f.uid ? ' on' : '')}>
             <i className={'dot' + (onlineSet.has(f.uid) ? ' on' : '')} title={onlineSet.has(f.uid) ? 'Online' : 'Offline'} />
             <a href={'#/profile/' + f.name}>{f.name}</a>
-            <button className="btn small-btn" onClick={() => create(f.uid)}>Challenge</button>
+            <button className="btn small-btn" aria-pressed={!!sel && sel.uid === f.uid} onClick={() => setWith(f.uid)}>Play</button>
           </div>
         ))}
       </div>
@@ -204,7 +217,9 @@ function FriendsTab() {
           </div>
         )}
       </div>
-      <button className="btn wide" onClick={() => create()}><Icon.plus />Create a game link</button>
+      {sel
+        ? <button className="btn primary big wide push" onClick={() => create(sel.uid)}><Icon.online />Challenge {sel.name}</button>
+        : <button className="btn wide push" onClick={() => create()}><Icon.plus />Create a game link</button>}
     </>
   );
 }

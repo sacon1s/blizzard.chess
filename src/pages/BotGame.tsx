@@ -66,9 +66,10 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
   const [thinking, setThinking] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   // предход: ход, сделанный, пока бот думает; играется сразу после ответа бота, если он легален
-  const [premove, setPremoveState] = useState<string | null>(null);
-  const premoveRef = useRef<string | null>(null);
-  const setPremove = (u: string | null) => { premoveRef.current = u; setPremoveState(u); };
+  const [premoves, setPremovesState] = useState<string[]>([]);
+  const premoveRef = useRef<string[]>([]);
+  const setPremoves = (l: string[]) => { premoveRef.current = l; setPremovesState(l); };
+  const onPremove = (u: string | null) => setPremoves(u ? [...premoveRef.current, u] : []);
   const [toast, setToast] = useState('');
   const gameId = useRef(newId());
   const lastBotEval = useRef(0);
@@ -178,10 +179,11 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
         if (cancelled || resultRef.current) return;
         setThinking(false);
         if (choice) apply(choice);
-        const pm = premoveRef.current;
+        const [pm, ...rest] = premoveRef.current;
         if (pm) {
-          setPremove(null);
-          setTimeout(() => { if (!resultRef.current && pos.current.side === playerColor) apply(pm); }, 40);
+          setPremoves(rest);
+          // первый предход играется сразу; если он стал невозможен — отменяются все
+          setTimeout(() => { if (!resultRef.current && pos.current.side === playerColor && !apply(pm)) setPremoves([]); }, 40);
         }
       }, wait);
     });
@@ -221,7 +223,7 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
     if (n && movesRef.current[n - 1].color === playerColor) n--;
     movesRef.current = movesRef.current.slice(0, n);
     pos.current = posAt(START_FEN, movesRef.current.map((m) => m.uci), n);
-    setMoves(movesRef.current); setView(n); setHint(null); setPremove(null);
+    setMoves(movesRef.current); setView(n); setHint(null); setPremoves([]);
     coachSeq.current++; setNote(null);
   }
   async function askHint() {
@@ -260,7 +262,7 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
       <div className="board-col">
         <PlayerBar color={top} name={nameOf(top)} sub={subOf(top)} avatar={avatarOf(top)} clock={clockOf(top)} running={!result && clocks.current.running === top} thinking={thinking && top === botColor} />
         <Board fen={fen} orientation={orient} movable={!result && view === live && !thinking ? playerColor : null} lastMove={last}
-          premovable={!result && view === live && s.premove ? playerColor : null} premove={premove} onPremove={setPremove}
+          premovable={!result && view === live && s.premove ? playerColor : null} premoves={premoves} onPremove={onPremove}
           animate onMove={(u) => apply(u)} theme={s.theme} coords={s.showCoords} autoQueen={s.autoQueen}
           arrows={hint && view === live ? [{ from: hint.slice(0, 2), to: hint.slice(2, 4), color: '#5fbf6a' }] : []} />
         <PlayerBar color={bottom} name={nameOf(bottom)} sub={subOf(bottom)} avatar={avatarOf(bottom)} clock={clockOf(bottom)} running={!result && clocks.current.running === bottom} thinking={thinking && bottom === botColor} />

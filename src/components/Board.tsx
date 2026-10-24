@@ -21,8 +21,8 @@ export interface BoardProps {
   autoQueen?: boolean;
   highlight?: number | null; // поле-подсказка
   premovable?: 0 | 1 | null; // чья сторона может делать предход, пока ходит соперник
-  premove?: string | null;
-  onPremove?: (uci: string | null) => void;
+  premoves?: string[]; // очередь предходов (как на chess.com — несколько подряд)
+  onPremove?: (uci: string | null) => void; // добавить предход или (null) отменить все
 }
 
 const MARK_COLORS: Record<string, string> = { o: '#f0a33a', g: '#5fbf6a', r: '#e2534b', b: '#4aa3df' };
@@ -81,11 +81,29 @@ export default function Board(p: BoardProps) {
   const canMove = p.movable === 'both' || p.movable === side;
   const canPre = !canMove && p.premovable !== undefined && p.premovable !== null && p.premovable !== side;
   const mover = canMove ? side : canPre ? p.premovable : -1;
-  const targets = useMemo(() => (sel < 0 ? new Map() : canMove ? targetsFrom(pos, sel) : canPre ? premoveTargets(pos, sel) : new Map()), [pos, sel, canMove, canPre]);
+  const pre = p.premoves || [];
+  // доска с уже поставленными предходами: фигуры показаны на новых местах
+  const vb = useMemo(() => {
+    const b: number[] = Array.from(pos.board as ArrayLike<number>);
+    for (const u of pre) {
+      const f = parseSq(u.slice(0, 2)), t = parseSq(u.slice(2, 4));
+      let pc = b[f];
+      if (!pc) continue;
+      if ((pc & 7) === 6 && Math.abs((t & 7) - (f & 7)) === 2) { // рокировка: и ладья
+        const rf = (t & 7) === 6 ? f + 3 : f - 4, rt = (t & 7) === 6 ? f + 1 : f - 1;
+        b[rt] = b[rf]; b[rf] = 0;
+      }
+      if ((pc & 7) === 1 && ((t >> 4) === 7 || (t >> 4) === 0)) pc = (pc & 8) | 5;
+      b[f] = 0; b[t] = pc;
+    }
+    return b;
+  }, [pos, pre.join(' ')]); // eslint-disable-line react-hooks/exhaustive-deps
+  const vpos = useMemo(() => ({ board: vb, castle: pos.castle }), [vb, pos]);
+  const targets = useMemo(() => (sel < 0 ? new Map() : canMove ? targetsFrom(pos, sel) : canPre ? premoveTargets(vpos, sel) : new Map()), [pos, vpos, sel, canMove, canPre]);
   // новая позиция — снять пометки; выбранную фигуру оставить, если ею можно ходить и сейчас (например, предход прервал ответ соперника)
   useEffect(() => {
     setPromo(null); setMarks(new Map());
-    setSel((v) => (v >= 0 && pos.board[v] && (pos.board[v] >> 3) === mover ? v : -1));
+    setSel((v) => (v >= 0 && vb[v] && (vb[v] >> 3) === mover ? v : -1));
   }, [p.fen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // новая позиция — снять выделение и пометки
@@ -114,7 +132,7 @@ export default function Board(p: BoardProps) {
     return sqAt(Math.floor((y - r.top) / s), Math.floor((x - r.left) / s), o);
   }
   function tryMove(from: number, to: number) {
-    const t = targets.get(to) || (canMove ? targetsFrom(pos, from).get(to) : canPre ? premoveTargets(pos, from).get(to) : undefined);
+    const t = targets.get(to) || (canMove ? targetsFrom(pos, from).get(to) : canPre ? premoveTargets(vpos, from).get(to) : undefined);
     if (!t) return false;
     if (canPre) { p.onPremove && p.onPremove(sqName(from) + sqName(to) + (t.promo ? 'q' : '')); setSel(-1); return true; }
     if (t.promo) {
@@ -130,7 +148,7 @@ export default function Board(p: BoardProps) {
     const sq = sqFromPoint(e.clientX, e.clientY);
     if (sq < 0) return;
     if (e.button === 2) {
-      if (p.premove && p.onPremove) p.onPremove(null);
+      if (pre.length && p.onPremove) p.onPremove(null);
       e.preventDefault();
       const col = e.shiftKey ? 'g' : (e.ctrlKey || e.metaKey) ? 'r' : e.altKey ? 'b' : 'o';
       setMarkDrag({ from: sq, to: sq, col });
@@ -141,7 +159,7 @@ export default function Board(p: BoardProps) {
     if (marks.size) setMarks(new Map());
     setPromo(null);
     if (!canMove && !canPre) return;
-    const piece = pos.board[sq];
+    const piece = canPre ? vb[sq] : pos.board[sq];
     if (sel >= 0 && sq !== sel && targets.has(sq)) { e.preventDefault(); tryMove(sel, sq); return; }
     if (piece && (piece >> 3) === mover) {
       e.preventDefault();
@@ -149,7 +167,7 @@ export default function Board(p: BoardProps) {
       if (!wasSel) setSel(sq);
       dragStart.current = { from: sq, x: e.clientX, y: e.clientY, wasSel, moved: false, id: e.pointerId };
       try { boardRef.current!.setPointerCapture(e.pointerId); } catch { /* */ }
-    } else { setSel(-1); if (canPre && p.premove && p.onPremove) p.onPremove(null); }
+    } else { setSel(-1); if (canPre && pre.length && p.onPremove) p.onPremove(null); }
   }
   function onPointerMove(e: React.PointerEvent) {
     if (markDrag) {
@@ -183,13 +201,13 @@ export default function Board(p: BoardProps) {
   const checkSq = pos.inCheck() ? pos.kingSq[side] : -1;
   const squares = [];
   for (let row = 0; row < 8; row++) for (let col = 0; col < 8; col++) {
-    const sq = sqAt(row, col, o), piece = pos.board[sq];
+    const sq = sqAt(row, col, o), piece = pre.length ? vb[sq] : pos.board[sq];
     const light = ((sq >> 4) + (sq & 7)) & 1;
     const t = targets.get(sq);
     const cls = ['sq', light ? 'l' : 'd'];
     if (p.lastMove && (sq === p.lastMove.from || sq === p.lastMove.to)) cls.push('last');
     if (sq === sel) cls.push('sel');
-    if (p.premove && (sqName(sq) === p.premove.slice(0, 2) || sqName(sq) === p.premove.slice(2, 4))) cls.push('pre');
+    if (pre.length && pre.some((u) => sqName(sq) === u.slice(0, 2) || sqName(sq) === u.slice(2, 4))) cls.push('pre');
     if (sq === checkSq) cls.push('check');
     if (p.highlight === sq) cls.push('hint');
     if (t) cls.push(t.capture || piece ? 'cap' : 'target');
@@ -229,7 +247,7 @@ export default function Board(p: BoardProps) {
   })();
 
   const ghostSize = boardRef.current ? boardRef.current.getBoundingClientRect().width / 8 : 0;
-  const dragPiece = drag ? pos.board[drag.from] : 0;
+  const dragPiece = drag ? (pre.length ? vb[drag.from] : pos.board[drag.from]) : 0;
   return (
     <div className="board" data-theme={p.theme || 'snow'} ref={boardRef}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}

@@ -9,7 +9,7 @@ import { ref, get } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { useAuth } from '../lib/auth';
 import { analyst } from '../lib/engine';
-import { buildMoves, entryFromInfo, terminalEntry, classifyAll, accuracy, counts, fmtEval, winPct, coachComment, perfRating, type Entry, type Cls } from '../lib/review';
+import { buildMoves, entryFromInfo, terminalEntry, classifyAll, accuracy, counts, fmtEval, winPct, coachComment, gameRatings, type Entry, type Cls } from '../lib/review';
 import { useSettings, getGame, cacheGet, cacheSet, type SavedGame } from '../lib/store';
 import { playSound, soundFor } from '../lib/sound';
 import { go } from '../lib/router';
@@ -52,7 +52,8 @@ export default function Review({ id }: { id?: string }) {
       </div>
     );
   }
-  return <ReviewGame key={id} game={g} />;
+  if (g.id !== id) return <div className="page narrow"><p className="muted">Loading the game…</p></div>;
+  return <ReviewGame key={g.id} game={g} />;
 }
 
 const VERDICT: Record<string, string> = {
@@ -149,7 +150,7 @@ function ReviewGame({ game }: { game: SavedGame }) {
         {tab === 'review' ? (
           <>
             <EvalGraph entries={entries} cls={cls} view={view} onView={onView} />
-            <Summary game={game} acc={acc} moves={moves} cls={cls} complete={complete} />
+            <Summary game={game} acc={acc} moves={moves} cls={cls} complete={complete} ratings={complete ? gameRatings(moves, entries) : null} />
           </>
         ) : (
           <MoveList moves={moves} view={view} onView={onView} classes={cls.map((x) => (x ? x.cls : null))}
@@ -215,7 +216,7 @@ function EvalGraph({ entries, cls, view, onView }: { entries: (Entry | null)[]; 
   );
 }
 
-function Summary({ game, acc, moves, cls, complete }: { game: SavedGame; acc: { white: number | null; black: number | null }; moves: ReturnType<typeof buildMoves>['moves']; cls: (Cls | null)[]; complete: boolean }) {
+function Summary({ game, acc, moves, cls, complete, ratings }: { game: SavedGame; acc: { white: number | null; black: number | null }; moves: ReturnType<typeof buildMoves>['moves']; cls: (Cls | null)[]; complete: boolean; ratings: { white: number | null; black: number | null } | null }) {
   const cw = counts(moves, cls, 0), cb = counts(moves, cls, 1);
   const fmt = (a: number | null) => (a === null ? '–' : a.toFixed(1));
   return (
@@ -225,9 +226,9 @@ function Summary({ game, acc, moves, cls, complete }: { game: SavedGame; acc: { 
         <span className="acc-label">Accuracy</span>
         <div className="acc black"><span>{game.black}</span><b>{fmt(acc.black)}</b></div>
       </div>
-      {complete && moves.length >= 20 && (
+      {complete && ratings && (ratings.white !== null || ratings.black !== null) && (
         <div className="acc-row perf">
-          <b>{perfRating(acc.white) ?? '–'}</b><span className="acc-label">Game rating</span><b>{perfRating(acc.black) ?? '–'}</b>
+          <b>{ratings.white ?? '–'}</b><span className="acc-label">Game rating</span><b>{ratings.black ?? '–'}</b>
         </div>
       )}
       <table className="counts">

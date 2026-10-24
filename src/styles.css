@@ -509,6 +509,12 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .tab-body .field .label { margin-bottom: 6px; }
 .tab-body .seg button { padding: 7px 6px; font-size: 13px; }
 .btn.wide { width: 100%; }
+.tab-body .push { margin-top: auto; }
+.vs-friend { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r-lg); background: var(--raised); border: 1px solid var(--accent); }
+.vs-friend span { flex: 1; }
+.friend-row.on a { color: var(--accent); }
+.rail-item.icon-only { padding: 0 10px; }
+.rail-item.icon-only svg { width: 21px; height: 21px; }
 .tab-body .btn.big.wide { margin-top: auto; }
 
 .friend-list { display: flex; flex-direction: column; gap: 2px; }
