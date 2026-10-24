@@ -4,7 +4,8 @@ import { useRoute, go } from './lib/router';
 import { useAuth } from './lib/auth';
 import { settlePending, joinGame, tcName } from './lib/online';
 import { searchPlayers, useChallenges, useRequests, dropChallenge, acceptRequest, declineRequest } from './lib/social';
-import { useSettings } from './lib/store';
+import { useSettings, settings } from './lib/store';
+import { onAward, mergeRemote, ACHIEVEMENTS } from './lib/achievements';
 import { Icon } from './components/icons';
 import Play from './pages/Play';
 import BotGame from './pages/BotGame';
@@ -15,10 +16,13 @@ import OnlineGame from './pages/OnlineGame';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
 import SettingsPage from './pages/Settings';
+import Learn from './pages/Learn';
+import Arena from './pages/Arena';
 
 const NAV: { path: string; label: string; icon: () => ReactNode; match: string[] }[] = [
-  { path: '/', label: 'Play', icon: Icon.online, match: ['', 'online', 'game', 'bots', 'play', 'review'] },
+  { path: '/', label: 'Play', icon: Icon.online, match: ['', 'online', 'game', 'bots', 'play', 'review', 'arena'] },
   { path: '/puzzles', label: 'Puzzles', icon: Icon.puzzle, match: ['puzzles'] },
+  { path: '/learn', label: 'Learn', icon: Icon.bulb, match: ['learn'] },
   { path: '/analysis', label: 'Analysis', icon: Icon.analysis, match: ['analysis'] },
 ];
 
@@ -91,7 +95,26 @@ function Notifications() {
   const [later, setLater] = useState<Set<string>>(() => { try { return new Set(JSON.parse(localStorage.getItem('bc.reqSeen') || '[]')); } catch { return new Set(); } });
   const hide = (id: string) => { const n = new Set(later).add(id); setLater(n); try { localStorage.setItem('bc.reqSeen', JSON.stringify([...n].slice(-200))); } catch { /* */ } };
   const [err, setErr] = useState('');
-  if (!profile) return null;
+  const [achs, setAchs] = useState<string[]>([]);
+  useEffect(() => onAward((id) => { setAchs((l) => [...l, id]); setTimeout(() => setAchs((l) => l.filter((x) => x !== id)), 6000); }), []);
+  useEffect(() => { if (profile) mergeRemote(profile.ach); }, [profile && profile.uid]); // eslint-disable-line react-hooks/exhaustive-deps
+  // уведомления браузера, когда вкладка свёрнута
+  const seen = useRef(new Set<string>());
+  useEffect(() => {
+    const items = [...challenges.map((c) => ['c' + c.gid, `${c.name} challenges you to a ${tcName(c.tc)} game`]), ...requests.map((r) => ['r' + r.uid, `${r.name} wants to be your friend`])];
+    for (const [id, text] of items) {
+      if (seen.current.has(id)) continue;
+      seen.current.add(id);
+      if (settings.get().notify && document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+        try { const n = new Notification('Blizzard Chess', { body: text, icon: 'icon-192.png', tag: id }); n.onclick = () => { window.focus(); n.close(); }; } catch { /* */ }
+      }
+    }
+  }, [challenges, requests]);
+  const achToasts = achs.map((id) => {
+    const a = ACHIEVEMENTS.find((x) => x.id === id);
+    return a ? <div key={'a' + id} className="toast ach-toast"><p><b>Achievement unlocked: {a.name}</b></p><p className="muted small">{a.text}</p></div> : null;
+  });
+  if (!profile) return achToasts.length ? <div className="toasts">{achToasts}</div> : null;
   const items = [
     ...challenges.map((c) => (
       <div key={'c' + c.gid} className="toast">
@@ -116,9 +139,10 @@ function Notifications() {
       </div>
     )),
   ];
-  if (!items.length && !err) return null;
+  if (!items.length && !err && !achToasts.length) return null;
   return (
     <div className="toasts" aria-live="polite">
+      {achToasts}
       {err && <div className="toast"><p>{err}</p><button className="btn ghost small-btn" onClick={() => setErr('')}>OK</button></div>}
       {items}
     </div>
@@ -134,7 +158,7 @@ export default function App() {
   const uid = user ? user.uid : '';
   useEffect(() => { if (uid) settlePending(uid); }, [uid]);
   useEffect(() => {
-    const titles: Record<string, string> = { '': 'Play', online: 'Play', bots: 'Play a bot', game: 'Online game', play: 'Bot game', puzzles: 'Puzzles', review: 'Game review', analysis: 'Analysis', login: 'Sign in', profile: 'Profile', settings: 'Settings' };
+    const titles: Record<string, string> = { '': 'Play', online: 'Play', bots: 'Play a bot', game: 'Online game', play: 'Bot game', puzzles: 'Puzzles', learn: 'Learn', arena: 'Arena', review: 'Game review', analysis: 'Analysis', login: 'Sign in', profile: 'Profile', settings: 'Settings' };
     document.title = titles[section] ? `${titles[section]} | Blizzard Chess` : 'Blizzard Chess';
   }, [section]);
   let page: ReactNode;
@@ -149,6 +173,8 @@ export default function App() {
     case 'login': page = <Login />; break;
     case 'profile': page = <Profile name={parts[1]} />; break;
     case 'settings': page = <SettingsPage />; break;
+    case 'learn': page = <Learn />; break;
+    case 'arena': page = <Arena id={parts[1]} />; break;
     default: page = <NotFound />;
   }
   return (

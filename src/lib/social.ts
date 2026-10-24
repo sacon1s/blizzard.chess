@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { ref, get, set, update, remove, onValue, query, orderByKey, startAt, endAt, limitToFirst, serverTimestamp } from 'firebase/database';
 import { db } from './firebase';
 import type { Profile } from './auth';
+import { award } from './achievements';
 
 export async function searchPlayers(prefix: string): Promise<{ uid: string; name: string }[]> {
   const p = prefix.trim().toLowerCase();
@@ -36,6 +37,7 @@ export const cancelRequest = (me: string, to: string) => remove(ref(db, `friendR
 export const declineRequest = (me: string, from: string) => remove(ref(db, `friendRequests/${me}/${from}`));
 export function acceptRequest(me: Profile, from: string, fromName: string) {
   const now = Date.now();
+  award('friend1');
   return update(ref(db), {
     [`friends/${from}/${me.uid}`]: { name: me.name, since: now },
     [`friends/${me.uid}/${from}`]: { name: fromName, since: now },

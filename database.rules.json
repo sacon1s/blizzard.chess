@@ -40,8 +40,16 @@
     "games": {
       ".read": true,
       "$gid": {
-        ".write": "auth != null && (data.exists() ? (data.child('white').val() === auth.uid || data.child('black').val() === auth.uid || data.child('status').val() === 'open') : (newData.child('white').val() === auth.uid || newData.child('black').val() === auth.uid))"
-      }
+        ".write": "auth != null && (data.exists() ? (data.child('white').val() === auth.uid || data.child('black').val() === auth.uid || data.child('status').val() === 'open') : (newData.child('white').val() === auth.uid || newData.child('black').val() === auth.uid))",
+        "chat": {
+          "$m": {
+            ".validate": "newData.hasChildren(['u', 'm']) && newData.child('m').isString() && newData.child('m').val().length <= 200"
+          }
+        }
+      },
+      ".indexOn": [
+        "status"
+      ]
     },
     "userGames": {
       "$uid": {
@@ -74,6 +82,16 @@
         ".read": "auth != null && auth.uid === $to",
         "$gid": {
           ".write": "auth != null"
+        }
+      }
+    },
+    "arenas": {
+      ".read": true,
+      "$aid": {
+        "players": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
         }
       }
     }

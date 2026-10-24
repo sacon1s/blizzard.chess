@@ -31,6 +31,7 @@ export default function Analysis({ query }: { query: URLSearchParams }) {
   const [on, setOn] = useState(true);
   const [load, setLoad] = useState('');
   const [err, setErr] = useState('');
+  const [panel, setPanel] = useState<'engine' | 'book'>('engine');
 
   const fen = view === 0 ? startFen : moves[view - 1].fenAfter;
   const pos = useMemo(() => newPos(fen), [fen]);
@@ -81,6 +82,11 @@ export default function Analysis({ query }: { query: URLSearchParams }) {
         </div>
       </div>
       <aside className="side-panel">
+        <div className="tabs" role="tablist">
+          <button role="tab" aria-selected={panel === 'engine'} onClick={() => setPanel('engine')}>Engine</button>
+          <button role="tab" aria-selected={panel === 'book'} onClick={() => setPanel('book')}>Openings</button>
+        </div>
+        {panel === 'book' ? <OpeningBook pos={pos} fen={fen} onMove={onMove} /> : <>
         <div className="engine-head">
           <label className="switch">
             <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
@@ -97,6 +103,7 @@ export default function Analysis({ query }: { query: URLSearchParams }) {
             </button>
           ))}
         </div>
+        </>}
         <MoveList moves={moves} view={view} onView={onView} startFullmove={newPos(startFen).fullmove} startSide={newPos(startFen).side} />
         <NavButtons view={view} total={moves.length} onView={onView} onFlip={() => setOrient((orient ^ 1) as 0 | 1)} />
         <div className="field">
@@ -113,6 +120,33 @@ export default function Analysis({ query }: { query: URLSearchParams }) {
           </div>
         </div>
       </aside>
+    </div>
+  );
+}
+
+// справочник дебютов: ходы сильных игроков из книги Blizzard (партии игроков 2500+)
+function OpeningBook({ pos, fen, onMove }: { pos: any; fen: string; onMove: (u: string) => void }) {
+  const list = useMemo(() => { try { return (pos.bookMoves() || []) as { m: number; uci: string; n: number; score: number }[]; } catch { return []; } }, [pos]);
+  const name = useMemo(() => { try { return pos.openingName() as string | null; } catch { return null; } }, [pos]);
+  const total = list.reduce((a, x) => a + x.n, 0);
+  const rows = list.slice().sort((a, b) => b.n - a.n);
+  return (
+    <div className="book">
+      <p className="book-name">{name || (fen.startsWith('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR') ? 'Starting position' : 'Opening not named')}</p>
+      {rows.length === 0 ? <p className="muted small">No master games from this position. You’re out of the opening book.</p> : (
+        <table className="book-table">
+          <thead><tr><th>Move</th><th>Games</th><th>Score for the side to move</th></tr></thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.uci} onClick={() => onMove(r.uci)} title="Play this move">
+                <td><b>{pos.moveToSan(r.m)}</b></td>
+                <td className="n">{r.n.toLocaleString()} <span className="muted">{total ? Math.round((100 * r.n) / total) + '%' : ''}</span></td>
+                <td><span className="score-bar"><i style={{ width: Math.round(r.score * 100) + '%' }} /><em>{Math.round(r.score * 100)}%</em></span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

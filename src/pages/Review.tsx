@@ -8,6 +8,7 @@ import { START_FEN, newPos, moveNumber, toPgn, REASONS } from '../lib/chess';
 import { ref, get } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { useAuth } from '../lib/auth';
+import { award } from '../lib/achievements';
 import { analyst } from '../lib/engine';
 import { buildMoves, entryFromInfo, terminalEntry, classifyAll, accuracy, counts, fmtEval, winPct, coachComment, gameRatings, type Entry, type Cls } from '../lib/review';
 import { useSettings, getGame, cacheGet, cacheSet, type SavedGame } from '../lib/store';
@@ -69,6 +70,7 @@ function ReviewGame({ game }: { game: SavedGame }) {
   const fens = useMemo(() => [game.startFen, ...moves.map((m) => m.fenAfter)], [moves, game.startFen]);
   const firstColor = newPos(game.startFen).side as 0 | 1;
   const cacheKey = 'rev.' + game.id + '.' + N;
+  const [retry, setRetry] = useState(false);
   const [entries, setEntries] = useState<(Entry | null)[]>(() => {
     const c = cacheGet<(Entry | null)[]>(cacheKey);
     return c && c.length === N + 1 ? c : Array(N + 1).fill(null);
@@ -103,6 +105,10 @@ function ReviewGame({ game }: { game: SavedGame }) {
   const done = entries.filter(Boolean).length;
   const complete = done === N + 1;
   const cls = useMemo(() => classifyAll(moves, entries), [moves, entries]);
+  const mistakes = useMemo(() => cls.map((c, k) => (c && ['mistake', 'blunder', 'miss'].includes(c.cls) && (game.playerColor === undefined || moves[k].color === game.playerColor) && entries[k] && entries[k]!.best ? k : -1)).filter((k) => k >= 0), [cls, moves, entries, game.playerColor]);
+  useEffect(() => {
+    if (complete && game.playerColor !== undefined && cls.some((c, k) => c && c.cls === 'brilliant' && moves[k].color === game.playerColor)) award('brilliant');
+  }, [complete]); // eslint-disable-line react-hooks/exhaustive-deps
   const acc = useMemo(() => (complete ? accuracy(entries, firstColor) : { white: null, black: null }), [complete, entries, firstColor]);
 
   const onView = useCallback((i: number) => {
@@ -126,6 +132,7 @@ function ReviewGame({ game }: { game: SavedGame }) {
     navigator.clipboard.writeText(pgn).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600); }, () => {});
   }
 
+  if (retry) return <RetryMistakes game={game} moves={moves} entries={entries} list={mistakes} onExit={() => setRetry(false)} />;
   return (
     <div className="game-layout review fixed-panel">
       <div className="board-col with-eval">
@@ -162,6 +169,7 @@ function ReviewGame({ game }: { game: SavedGame }) {
           <button className="btn" onClick={() => go('/analysis?fen=' + encodeURIComponent(fens[view]))}><Icon.analysis />Analyse</button>
           <button className="btn" onClick={copyPgn}><Icon.copy />{copied ? 'Copied' : 'PGN'}</button>
         </div>
+        {complete && mistakes.length > 0 && <button className="btn primary wide" onClick={() => setRetry(true)}>Retry your mistakes ({mistakes.length})</button>}
       </aside>
     </div>
   );
@@ -242,6 +250,71 @@ function Summary({ game, acc, moves, cls, complete, ratings }: { game: SavedGame
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// работа над ошибками: позиция перед своей ошибкой — найти ход лучше
+function RetryMistakes({ game, moves, entries, list, onExit }: { game: SavedGame; moves: ReturnType<typeof buildMoves>['moves']; entries: (Entry | null)[]; list: number[]; onExit: () => void }) {
+  const s = useSettings();
+  const [i, setI] = useState(0);
+  const [state, setState] = useState<'play' | 'checking' | 'right' | 'wrong' | 'answer' | 'shown'>('play');
+  const [tried, setTried] = useState<string | null>(null);
+  const [found, setFound] = useState(0);
+  const k = list[i];
+  const mv = moves[k];
+  const before = entries[k]!;
+  const color = mv.color;
+  const [fen, setFen] = useState(mv.fenBefore);
+  useEffect(() => { setFen(moves[list[i]].fenBefore); setState('play'); setTried(null); }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
+  const winOf = (e: Entry) => { const w = winPct(e) ?? 50; return color === 0 ? w : 100 - w; };
+  async function onMove(uci: string) {
+    if (state !== 'play' && state !== 'wrong') return;
+    const p = newPos(mv.fenBefore); const m = p.uciToMove(uci); if (!m) return;
+    const san = p.moveToSan(m); p.make(m);
+    setFen(p.fen()); setTried(san);
+    playSound(soundFor({ check: p.inCheck(), castle: false, capture: false }));
+    if (uci === before.best) { setState('right'); setFound((x) => x + 1); return; }
+    if (uci === mv.uci) { setState('wrong'); return; }
+    setState('checking');
+    const info = await analyst().go(game.startFen, [...game.moves.slice(0, k), uci], { movetime: 600 });
+    const after = entryFromInfo(info, (color ^ 1) as 0 | 1);
+    const loss = after ? winOf(before) - winOf(after) : 100;
+    if (loss < 5) { setState('right'); setFound((x) => x + 1); } else setState('wrong');
+  }
+  const bestSan = before.best ? (() => { const p = newPos(mv.fenBefore); const m = p.uciToMove(before.best); return m ? p.moveToSan(m) : before.best; })() : '';
+  const last = i === list.length - 1;
+  const next = () => { if (last) setState('shown'); else setI(i + 1); };
+  const arrows = state === 'answer' && before.best ? [{ from: before.best.slice(0, 2), to: before.best.slice(2, 4), color: '#4fae5a' }] : [];
+  return (
+    <div className="game-layout review fixed-panel">
+      <div className="board-col">
+        <div className="pbar puzzle-bar"><span className={'turn ' + (color ? 'black' : 'white')} /><b>Find a better move for {color ? 'Black' : 'White'}</b></div>
+        <Board fen={fen} orientation={color} movable={state === 'play' || state === 'wrong' ? color : null} lastMove={null} animate onMove={(u) => { if (state === 'wrong') { setFen(mv.fenBefore); setState('play'); setTimeout(() => onMove(u), 0); } else onMove(u); }}
+          theme={s.theme} coords={s.showCoords} autoQueen={s.autoQueen} arrows={arrows}
+          badge={null} />
+        <div className="pbar" />
+      </div>
+      <aside className="side-panel">
+        <div className="puzzle-rating"><span>Mistake {i + 1} of {list.length}</span><b>{found} found</b></div>
+        <div className={'puzzle-msg ' + (state === 'right' ? 'solved' : state === 'wrong' ? 'wrong' : '')}>
+          <p>In the game you played <b>{moveNumber(mv.fenBefore)} {mv.san}</b>. Find something better.</p>
+          {state === 'checking' && <p className="muted">Checking {tried}…</p>}
+          {state === 'right' && <p><b>Yes!</b> {tried} is {tried === bestSan ? 'the best move' : 'a good move too'}{tried !== bestSan ? `. The engine’s choice was ${bestSan}.` : '.'}</p>}
+          {state === 'wrong' && <p><b>{tried === mv.san ? 'That’s the move from the game.' : `${tried} isn’t better.`}</b> Try again or see the answer.</p>}
+          {state === 'answer' && <p>The best move here was <b>{bestSan}</b>.</p>}
+        </div>
+        <div className="actions">
+          {state === 'right' || state === 'answer' ? <button className="btn primary" onClick={next}>{last ? 'Finish' : 'Next mistake'}</button> : (
+            <>
+              <button className="btn" onClick={() => { setFen(mv.fenBefore); setState('answer'); }} disabled={state === 'checking'}>Show answer</button>
+              <button className="btn ghost" onClick={next}>{last ? 'Finish' : 'Skip'}</button>
+            </>
+          )}
+        </div>
+        {state === 'shown' && <p className="muted">Done: you found {found} of {list.length}.</p>}
+        <button className="btn ghost push" onClick={onExit}>Back to the review</button>
+      </aside>
     </div>
   );
 }

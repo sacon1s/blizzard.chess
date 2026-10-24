@@ -14,6 +14,7 @@ import { useAuth } from '../lib/auth';
 import { entryFromInfo, terminalEntry, classifyOne, richMove, coachComment, type Entry, type Cls } from '../lib/review';
 import ClsIcon from '../components/ClsIcon';
 import { settings } from '../lib/store';
+import { award } from '../lib/achievements';
 
 const VALUE = [0, 1, 3, 3, 5, 9, 0];
 const VERDICT: Record<string, string> = {
@@ -85,6 +86,7 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
     const c = clocks.current;
     if (c.running !== null) { c.t[c.running] -= performance.now() - c.since; c.running = null; }
     resultRef.current = r; setResult(r); setThinking(false);
+    if ((r.result === '1-0' && playerColor === 0) || (r.result === '0-1' && playerColor === 1)) { if (level >= 5) award('beat5'); if (level >= 8) award('beat8'); if (level >= 10) award('beat10'); }
     bot().stop();
     const ms = movesRef.current;
     saveGame({

@@ -6,17 +6,18 @@ import type { MoveRec } from '../lib/chess';
 
 export function fmtClock(ms: number): string {
   if (ms < 0) ms = 0;
+  if (ms >= 86400000) { const d = Math.floor(ms / 86400000), h = Math.floor((ms % 86400000) / 3600000); return `${d}d ${h}h`; }
   if (ms < 10000) return (ms / 1000).toFixed(1);
   const s = Math.ceil(ms / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60);
   return h ? `${h}:${String(m % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : `${m}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export function PlayerBar(p: { name: string; sub?: string; avatar?: React.ReactNode; clock?: number | null; running?: boolean; color: 0 | 1; thinking?: boolean; captured?: string }) {
+export function PlayerBar(p: { name: string; sub?: string; avatar?: React.ReactNode; flag?: React.ReactNode; clock?: number | null; running?: boolean; color: 0 | 1; thinking?: boolean; captured?: string }) {
   return (
     <div className={'pbar' + (p.running ? ' on' : '')}>
       <div className={'avatar ' + (p.color ? 'black' : 'white')}>{p.avatar}</div>
       <div className="pname">
-        <b>{p.name}</b>
+        <b>{p.name}{p.flag}</b>
         {p.sub && <span>{p.sub}</span>}
       </div>
       {p.thinking && <span className="thinking" aria-label="Thinking"><i /><i /><i /></span>}

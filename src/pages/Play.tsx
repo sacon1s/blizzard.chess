@@ -8,15 +8,17 @@ import { BotAvatar } from '../components/BotAvatar';
 import { START_FEN } from '../lib/chess';
 import { BOTS, TIME_CONTROLS } from '../lib/bots';
 import { useAuth, useOnlineCount, speedOf, type Speed } from '../lib/auth';
-import { seek, watchSeeks, createFriendGame, leaderboard, parseTcStr, tcName, QUICK, SPEED_LABEL, ratingOf } from '../lib/online';
+import { seek, watchSeeks, createFriendGame, leaderboard, liveGames, userGames, watchGame, movesOf, parseTcStr, tcName, QUICK, SPEED_LABEL, ratingOf, type OGame } from '../lib/online';
+import { PlayerAvatar } from '../components/Avatar';
+import { ArenaCards } from './Arena';
 import { useFriends, useOnlineSet, sendChallenge, searchPlayers } from '../lib/social';
 import { settings, useSettings } from '../lib/store';
 import { go, useRoute } from '../lib/router';
 
 const speedOfTc = (tc: string) => { const t = parseTcStr(tc); return speedOf(t.base, t.inc); };
-type Tab = 'online' | 'bots' | 'friends' | 'top';
+type Tab = 'online' | 'bots' | 'friends' | 'top' | 'watch';
 const TABS: { v: Tab; label: string }[] = [
-  { v: 'online', label: 'Online' }, { v: 'bots', label: 'Bots' }, { v: 'friends', label: 'Friends' }, { v: 'top', label: 'Top' },
+  { v: 'online', label: 'Online' }, { v: 'bots', label: 'Bots' }, { v: 'friends', label: 'Friends' }, { v: 'top', label: 'Top' }, { v: 'watch', label: 'Watch' },
 ];
 
 export default function Play({ initialTab }: { initialTab?: Tab }) {
@@ -59,7 +61,7 @@ export default function Play({ initialTab }: { initialTab?: Tab }) {
         {bottom}
       </div>
       <aside className="side-panel">
-        <div className="tabs four" role="tablist">
+        <div className="tabs five" role="tablist">
           {TABS.map((t) => <button key={t.v} role="tab" aria-selected={tab === t.v} onClick={() => setTab(t.v)}>{t.label}</button>)}
         </div>
         <div className="tab-body">
@@ -67,6 +69,7 @@ export default function Play({ initialTab }: { initialTab?: Tab }) {
           {tab === 'bots' && <BotsTab />}
           {tab === 'friends' && <FriendsTab />}
           {tab === 'top' && <TopTab />}
+          {tab === 'watch' && <WatchTab />}
         </div>
       </aside>
     </div>
@@ -104,6 +107,8 @@ function OnlineTab({ needAccount, signedIn, seeking, onStart, onStop, err }: { n
         })}
       </div>
       {err && <p className="error" role="alert">{err}</p>}
+      <span className="label section-gap-sm">Arenas</span>
+      <ArenaCards />
       <p className="muted small tab-foot">{seeking ? 'Searching for an opponent. Click the time control again to cancel.' : 'Rated games. Ratings start at 1200.'}{online ? ` ${online} ${online === 1 ? 'player' : 'players'} online.` : ''}</p>
     </>
   );
@@ -176,6 +181,7 @@ function FriendsTab() {
   if (!loading && !profile) return <SignInNote signedIn={!!user} text="Sign in to add friends and challenge them." />;
   return (
     <>
+      <DailyGames uid={profile ? profile.uid : null} />
       {sel && (
         <div className="vs-friend">
           <i className={'dot' + (onlineSet.has(sel.uid) ? ' on' : '')} />
@@ -185,8 +191,8 @@ function FriendsTab() {
       )}
       <div className="field">
         <span className="label">Time control</span>
-        <div className="seg">
-          {['3+2', '5+0', '10+0', '15+10', '30+0'].map((x) => <button key={x} aria-pressed={tc === x} onClick={() => setTc(x)}>{tcName(x)}</button>)}
+        <div className="seg wrap">
+          {['3+2', '5+0', '10+0', '15+10', '1d', '3d'].map((x) => <button key={x} aria-pressed={tc === x} onClick={() => setTc(x)} title={x.endsWith('d') ? 'Correspondence: this much time for every move' : undefined}>{tcName(x)}</button>)}
         </div>
       </div>
       <div className="field">
@@ -235,9 +241,68 @@ function TopTab() {
       </div>
       {!rows ? <p className="muted small">Loading…</p> : rows.length === 0 ? <p className="muted small">No rated {SPEED_LABEL[sp].toLowerCase()} games yet. Play one and take first place.</p> : (
         <ol className="leaders">
-          {rows.map((r) => <li key={r.uid}><a href={'#/profile/' + r.name}>{r.name}</a><b>{r.rating}</b></li>)}
+          {rows.map((r) => <li key={r.uid}><PlayerAvatar uid={r.uid} size={24} /><a href={'#/profile/' + r.name}>{r.name}</a><b>{r.rating}</b></li>)}
         </ol>
       )}
     </>
+  );
+}
+
+// идущие партии: можно открыть и смотреть
+function WatchTab() {
+  const [games, setGames] = useState<OGame[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => liveGames(20).then((g) => alive && setGames(g.filter((x) => movesOf(x).length > 0 || Date.now() - (x.created || 0) < 120000)), () => alive && setGames([]));
+    load();
+    const t = setInterval(load, 15000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+  if (!games) return <p className="muted small">Loading…</p>;
+  if (!games.length) return <p className="muted small">Nobody is playing right now. Start a game and others can watch it here.</p>;
+  return (
+    <ul className="watch-list">
+      {games.map((g) => (
+        <li key={g.id}>
+          <a href={'#/game/' + g.id} className="watch-row">
+            <span className="wp"><PlayerAvatar uid={g.white} size={22} /><b>{g.wName}</b>{g.rated && g.wRating ? <em>{g.wRating}</em> : null}</span>
+            <span className="wp"><PlayerAvatar uid={g.black} size={22} /><b>{g.bName}</b>{g.rated && g.bRating ? <em>{g.bRating}</em> : null}</span>
+            <span className="meta">{tcName(g.tc)}<br />move {Math.ceil(movesOf(g).length / 2) || 1}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// партии «ход в день», которые сейчас идут: где ваш ход — сверху
+function DailyGames({ uid }: { uid: string | null }) {
+  const [games, setGames] = useState<OGame[]>([]);
+  useEffect(() => {
+    if (!uid) return;
+    let alive = true;
+    const unsubs: (() => void)[] = [];
+    userGames(uid, 60).then((list) => {
+      if (!alive) return;
+      const live = list.filter((g) => g.pending && g.daily).slice(0, 10);
+      const map = new Map<string, OGame>();
+      for (const ug of live) unsubs.push(watchGame(ug.id, (g) => { if (!g) return; if (g.status === 'started') map.set(g.id, g); else map.delete(g.id); if (alive) setGames([...map.values()]); }));
+    }, () => {});
+    return () => { alive = false; unsubs.forEach((f) => f()); };
+  }, [uid]);
+  if (!uid || !games.length) return null;
+  const myTurn = (g: OGame) => (movesOf(g).length % 2 === 0 ? g.white : g.black) === uid;
+  const sorted = games.slice().sort((a, b) => Number(myTurn(b)) - Number(myTurn(a)));
+  return (
+    <div className="daily-games">
+      <span className="label">Daily games</span>
+      {sorted.map((g) => (
+        <a key={g.id} href={'#/game/' + g.id} className={'friend-row' + (myTurn(g) ? ' on' : '')}>
+          <i className={'dot' + (myTurn(g) ? ' on' : '')} />
+          <span className="dg-name">vs {g.white === uid ? g.bName : g.wName}</span>
+          <span className="muted small">{myTurn(g) ? 'Your move' : 'Their move'}</span>
+        </a>
+      ))}
+    </div>
   );
 }

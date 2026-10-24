@@ -3,14 +3,17 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import Board from '../components/Board';
 import { PlayerBar, MoveList, NavButtons, useArrowKeys } from '../components/GameParts';
 import { Icon } from '../components/icons';
-import { START_FEN, newPos, play, resultText, type MoveRec } from '../lib/chess';
+import { newPos, play, resultText, type MoveRec } from '../lib/chess';
 import { useAuth } from '../lib/auth';
-import { watchGame, joinGame, sendMove, claimTimeout, resign, abort, offerDraw, answerDraw, claimAbandon, presence, recordStart, settle, serverNow, movesOf, tcName, SPEED_LABEL, LEAVE_MS, type OGame } from '../lib/online';
+import { startOf, rematch, sendChat, watchGame, joinGame, sendMove, claimTimeout, resign, abort, offerDraw, answerDraw, claimAbandon, presence, recordStart, settle, serverNow, movesOf, tcName, SPEED_LABEL, LEAVE_MS, type OGame } from '../lib/online';
 import { useSettings, saveGame } from '../lib/store';
 import { playSound, soundFor } from '../lib/sound';
 import { materialDiff } from './BotGame';
 import { go } from '../lib/router';
 import { dropChallenge } from '../lib/social';
+import { PlayerAvatar, Flag, usePlayerLook } from '../components/Avatar';
+import { award } from '../lib/achievements';
+import { scoreArenaGame, arenaById } from '../lib/arena';
 
 export default function OnlineGame({ id }: { id?: string }) {
   const [g, setG] = useState<OGame | null | undefined>(undefined);
@@ -73,7 +76,7 @@ function Invite({ g }: { g: OGame }) {
 
 function Live({ g }: { g: OGame }) {
   const s = useSettings();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const uid = user ? user.uid : '';
   const myColor: 0 | 1 | null = g.white === uid ? 0 : g.black === uid ? 1 : null;
   const [orient, setOrient] = useState<0 | 1>(myColor ?? 0);
@@ -89,12 +92,12 @@ function Live({ g }: { g: OGame }) {
 
   // ходы: из базы + свой ещё не подтверждённый
   const ucis = useMemo(() => { const m = movesOf(g); return pending && m.length % 2 === myColor ? [...m, pending] : m; }, [g.moves, pending, myColor]); // eslint-disable-line react-hooks/exhaustive-deps
-  const moves = useMemo(() => { const p = newPos(), out: MoveRec[] = []; for (const u of ucis) { const r = play(p, u); if (!r) break; out.push(r); } return out; }, [ucis]);
+  const moves = useMemo(() => { const p = newPos(startOf(g)), out: MoveRec[] = []; for (const u of ucis) { const r = play(p, u); if (!r) break; out.push(r); } return out; }, [ucis]);
   const N = moves.length;
   const shown = view < 0 || view > N ? N : view;
-  const fen = shown === 0 ? START_FEN : moves[shown - 1].fenAfter;
+  const fen = shown === 0 ? startOf(g) : moves[shown - 1].fenAfter;
   const sideToMove = (N & 1) as 0 | 1;
-  const liveFen = N === 0 ? START_FEN : moves[N - 1].fenAfter;
+  const liveFen = N === 0 ? startOf(g) : moves[N - 1].fenAfter;
   const [premoves, setPremoves] = useState<string[]>([]);
   const onPremove = (u: string | null) => setPremoves((l) => (u ? [...l, u] : []));
 
@@ -130,9 +133,14 @@ function Live({ g }: { g: OGame }) {
   useEffect(() => {
     if (g.status !== 'over' && g.status !== 'aborted') return;
     if (myColor !== null) settle(g, uid).then((d) => setDelta(d), () => {});
+    if (myColor !== null && g.status === 'over' && g.arena) { scoreArenaGame(g, uid).catch(() => {}); award('arena1'); }
+    if (myColor !== null && g.status === 'over') {
+      if (g.result && g.result !== '1/2-1/2' && (g.result === '1-0') === (myColor === 0)) award('firstWin');
+      if (profile) { const n = (profile.wins || 0) + (profile.draws || 0) + (profile.losses || 0) + 1; if (n >= 10) award('games10'); if (n >= 100) award('games100'); }
+    }
     if (g.status === 'over' && g.result && N > 0) {
       saveGame({
-        id: g.id, date: new Date(g.created || Date.now()).toISOString(), white: g.wName || 'White', black: g.bName || 'Black', startFen: START_FEN,
+        id: g.id, date: new Date(g.created || Date.now()).toISOString(), white: g.wName || 'White', black: g.bName || 'Black', startFen: startOf(g),
         moves: movesOf(g), sans: moves.map((m) => m.san), result: g.result, reason: g.reason || '', source: 'online', playerColor: myColor ?? undefined,
         event: `${g.rated ? 'Rated' : 'Casual'} ${SPEED_LABEL[g.speed].toLowerCase()} game`,
       });
@@ -169,7 +177,7 @@ function Live({ g }: { g: OGame }) {
     return [g.rated && r ? String(Math.round(r)) : '', d > 0 ? `+${d}` : ''].filter(Boolean).join('  ');
   };
   const oppUid = myColor === null ? '' : (myColor === 0 ? g.black : g.white) || '';
-  const oppLeft = live && oppUid && g.left && g.left[oppUid] ? serverNow() - g.left[oppUid] : 0;
+  const oppLeft = live && !g.daily && oppUid && g.left && g.left[oppUid] ? serverNow() - g.left[oppUid] : 0;
   const nMoves = movesOf(g).length;
   const won = g.result && myColor !== null && ((g.result === '1-0') === (myColor === 0)) && g.result !== '1/2-1/2';
   const drawn = g.result === '1/2-1/2';
@@ -179,11 +187,11 @@ function Live({ g }: { g: OGame }) {
   return (
     <div className="game-layout fixed-panel">
       <div className="board-col">
-        <PlayerBar color={top} name={nameOf(top)} sub={subOf(top)} avatar={<Icon.user />} clock={clockOf(top)} running={live && nMoves >= 2 && sideToMove === top} />
+        <PlayerBar color={top} name={nameOf(top)} sub={subOf(top)} avatar={<PlayerAvatar uid={top === 0 ? g.white : g.black} />} flag={<FlagOf uid={top === 0 ? g.white : g.black} />} clock={clockOf(top)} running={live && nMoves >= 2 && sideToMove === top} />
         <Board fen={fen} orientation={orient} movable={myColor !== null && live && shown === N && !pending ? myColor : null}
           premovable={myColor !== null && live && shown === N && s.premove ? myColor : null} premoves={premoves} onPremove={onPremove}
           lastMove={shown > 0 ? moves[shown - 1] : null} animate onMove={onMove} theme={s.theme} coords={s.showCoords} autoQueen={s.autoQueen} />
-        <PlayerBar color={bottom} name={nameOf(bottom)} sub={subOf(bottom)} avatar={<Icon.user />} clock={clockOf(bottom)} running={live && nMoves >= 2 && sideToMove === bottom} />
+        <PlayerBar color={bottom} name={nameOf(bottom)} sub={subOf(bottom)} avatar={<PlayerAvatar uid={bottom === 0 ? g.white : g.black} />} flag={<FlagOf uid={bottom === 0 ? g.white : g.black} />} clock={clockOf(bottom)} running={live && nMoves >= 2 && sideToMove === bottom} />
       </div>
       <aside className="side-panel">
         <div className="panel-head">
@@ -203,7 +211,8 @@ function Live({ g }: { g: OGame }) {
             <p>{resultText(g.result ? { result: g.result, reason: g.reason || '' } : null)}{g.rated && delta !== null ? <> · rating <b>{delta >= 0 ? '+' : '−'}{Math.abs(delta)}</b></> : null}</p>
             <div className="row">
               <button className="btn primary" onClick={() => go('/review/' + g.id)}><Icon.review />Game review</button>
-              <button className="btn" onClick={() => go('/online?tc=' + encodeURIComponent(g.tc))}>New {tcName(g.tc)}</button>
+              {g.arena ? <ArenaBack id={g.arena} /> : myColor !== null && <RematchButton g={g} />}
+              {!g.daily && <button className="btn" onClick={() => go('/online?tc=' + encodeURIComponent(g.tc))}>New {tcName(g.tc)}</button>}
             </div>
           </div>
         )}
@@ -226,6 +235,7 @@ function Live({ g }: { g: OGame }) {
           </div>
         )}
         <MoveList moves={moves} view={shown} onView={onView} />
+        {s.chat && <Chat g={g} canWrite={myColor !== null} />}
         <NavButtons view={shown} total={N} onView={onView} onFlip={() => setOrient((orient ^ 1) as 0 | 1)} />
         {live && myColor !== null && (
           <div className="actions">
@@ -242,4 +252,74 @@ function Live({ g }: { g: OGame }) {
       </aside>
     </div>
   );
+}
+
+function FlagOf({ uid }: { uid?: string }) {
+  const look = usePlayerLook(uid);
+  return <Flag country={look.country} />;
+}
+
+// реванш: предложить, принять предложение соперника, ждать ответа
+function RematchButton({ g }: { g: OGame }) {
+  const { profile } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const mine = g.rematch && profile && g.rematch.by === profile.uid;
+  // наш реванш принят — переходим в новую партию
+  useEffect(() => {
+    if (!g.rematch) return;
+    return watchGame(g.rematch.gid, (ng) => { if (ng && ng.status === 'started') go('/game/' + ng.id); });
+  }, [g.rematch && g.rematch.gid]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!profile) return null;
+  const click = () => {
+    setBusy(true); setErr('');
+    rematch(g, profile).then((gid) => { if (!gid) setErr('The rematch is no longer available.'); }, () => setErr('Couldn’t start a rematch.')).finally(() => setBusy(false));
+  };
+  if (mine) return <button className="btn" disabled>Rematch offered…</button>;
+  return (
+    <>
+      <button className={'btn' + (g.rematch ? ' primary' : '')} disabled={busy} onClick={click}>{g.rematch ? 'Accept rematch' : 'Rematch'}</button>
+      {err && <span className="error small">{err}</span>}
+    </>
+  );
+}
+
+const QUICK_PHRASES = ['Hi!', 'Good luck!', 'Have fun!', 'Good game', 'Well played', 'Thanks!', 'Oops'];
+function Chat({ g, canWrite }: { g: OGame; canWrite: boolean }) {
+  const { profile } = useAuth();
+  const [text, setText] = useState('');
+  const box = useRef<HTMLDivElement>(null);
+  const msgs = useMemo(() => Object.values(g.chat || {}).sort((a, b) => a.t - b.t).slice(-60), [g.chat]);
+  useEffect(() => { if (box.current) box.current.scrollTop = box.current.scrollHeight; }, [msgs.length]);
+  const send = (m: string) => { const t = m.trim(); if (!t || !profile) return; sendChat(g.id, profile, t).catch(() => {}); setText(''); };
+  return (
+    <div className="chat">
+      <div className="chat-msgs" ref={box} aria-live="polite">
+        {msgs.length === 0 ? <p className="muted small">{canWrite ? 'Say hi to your opponent.' : 'No messages.'}</p> : msgs.map((m, i) => (
+          <p key={i}><b>{m.n}</b> {m.m}</p>
+        ))}
+      </div>
+      {canWrite && profile && (
+        <>
+          <div className="chat-quick">{QUICK_PHRASES.map((q) => <button key={q} onClick={() => send(q)}>{q}</button>)}</div>
+          <form className="chat-input" onSubmit={(e) => { e.preventDefault(); send(text); }}>
+            <input value={text} onChange={(e) => setText(e.target.value)} maxLength={200} placeholder="Message" aria-label="Chat message" />
+          </form>
+        </>
+      )}
+    </div>
+  );
+}
+
+// после партии арены — обратно в арену (сами через 5 секунд, пока арена идёт)
+function ArenaBack({ id }: { id: string }) {
+  const info = arenaById(id);
+  const running = !!info && Date.now() < info.end;
+  const [n, setN] = useState(5);
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => setN((x) => { if (x <= 1) { clearInterval(t); go('/arena/' + id); } return x - 1; }), 1000);
+    return () => clearInterval(t);
+  }, [running, id]);
+  return <button className="btn primary" onClick={() => go('/arena/' + id)}>Back to the arena{running ? ` (${n})` : ''}</button>;
 }

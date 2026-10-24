@@ -2,10 +2,10 @@
 //   seeks/<контроль>/<uid>  — очередь ожидающих;  matches/<uid> — id партии для того, кого нашли;
 //   games/<id> — партия;  userGames/<uid>/<id> — история игрока (пишет только он сам).
 // Время считается по часам сервера (.info/serverTimeOffset); ходы записываются транзакцией.
-import { ref, push, set, get, onValue, runTransaction, onDisconnect, remove, update, query, orderByChild, limitToLast, serverTimestamp } from 'firebase/database';
+import { ref, push, set, get, onValue, runTransaction, onDisconnect, remove, update, query, orderByChild, limitToLast, equalTo, serverTimestamp } from 'firebase/database';
 import { db } from './firebase';
 import { speedOf, DEFAULT_RATING, type Profile, type Speed } from './auth';
-import { START_FEN, posAt, play, gameEnd } from './chess';
+import { START_FEN, posAt, play, gameEnd, newPos } from './chess';
 
 let offset = 0;
 onValue(ref(db, '.info/serverTimeOffset'), (s) => { offset = s.val() || 0; }, () => {});
@@ -18,16 +18,26 @@ export interface OGame {
   moves?: string;
   clock: { w: number; b: number; last: number };
   status: 'open' | 'started' | 'over' | 'aborted'; invited?: string;
+  fen?: string; daily?: boolean; arena?: string;
+  rematch?: { gid: string; by: string };
+  chat?: Record<string, { u: string; n: string; m: string; t: number }>;
   result?: '1-0' | '0-1' | '1/2-1/2'; reason?: string;
   drawOffer?: string | null;
   left?: Record<string, number>;
   settled?: Record<string, number>;
 }
-export interface UserGame { opp: string; oppName: string; color: 0 | 1; tc: string; speed: Speed; rated: boolean; date: number; pending?: boolean; result?: string; reason?: string; delta?: number }
+export interface UserGame { opp: string; oppName: string; color: 0 | 1; tc: string; speed: Speed; rated: boolean; date: number; pending?: boolean; result?: string; reason?: string; delta?: number; op?: string; daily?: boolean }
 
 export const QUICK = ['1+0', '2+1', '3+0', '3+2', '5+0', '5+3', '10+0', '10+5', '15+10', '30+0'];
-export function parseTcStr(tc: string) { const [m, s] = tc.split('+').map(Number); return { base: m * 60000, inc: (s || 0) * 1000 }; }
-export function tcName(tc: string) { const [m, s] = tc.split('+'); return s && s !== '0' ? `${m} + ${s}` : `${m} min`; }
+export function parseTcStr(tc: string) {
+  if (tc.endsWith('d')) return { base: parseInt(tc, 10) * 86400000, inc: 0 }; // «ход в день»: на каждый ход N суток
+  const [m, s] = tc.split('+').map(Number); return { base: m * 60000, inc: (s || 0) * 1000 };
+}
+export function tcName(tc: string) {
+  if (tc.endsWith('d')) { const n = parseInt(tc, 10); return n === 1 ? '1 day' : `${n} days`; }
+  const [m, s] = tc.split('+'); return s && s !== '0' ? `${m} + ${s}` : `${m} min`;
+}
+export const startOf = (g: { fen?: string }) => g.fen || START_FEN;
 export const SPEED_LABEL: Record<Speed, string> = { bullet: 'Bullet', blitz: 'Blitz', rapid: 'Rapid', classical: 'Classical' };
 export const ratingOf = (p: Profile | null | undefined, sp: Speed) => (p && p.ratings && p.ratings[sp]) || DEFAULT_RATING;
 export const movesOf = (g: OGame) => (g.moves ? g.moves.split(' ') : []);
@@ -36,15 +46,21 @@ export function watchGame(id: string, cb: (g: OGame | null) => void) {
   return onValue(ref(db, 'games/' + id), (s) => cb(s.exists() ? ({ id, ...s.val() } as OGame) : null), () => cb(null));
 }
 
-function newGameData(tc: string, rated: boolean) {
+export interface GameOpts { rated?: boolean; daily?: boolean; arena?: string }
+function newGameData(tc: string, rated: boolean, o: GameOpts = {}) {
   const { base, inc } = parseTcStr(tc);
-  return { tc, base, inc, speed: speedOf(base, inc), rated, created: serverTimestamp(), moves: '', clock: { w: base, b: base, last: 0 } };
+  const daily = tc.endsWith('d');
+  const extra: Record<string, unknown> = {};
+  if (daily) extra.daily = true;
+  if (o.arena) extra.arena = o.arena;
+  return { tc, base, inc, speed: daily ? 'classical' : speedOf(base, inc), rated, created: serverTimestamp(), moves: '', clock: { w: base, b: base, last: 0 }, ...extra };
 }
 
 // ---------------------------------------------------------------- поиск соперника
-export function seek(tc: string, me: Profile, onMatched: (gid: string) => void): () => void {
+export function seek(tc: string, me: Profile, onMatched: (gid: string) => void, o: GameOpts = {}): () => void {
   const sp = speedOf(parseTcStr(tc).base, parseTcStr(tc).inc);
-  const qref = ref(db, 'seeks/' + tc), mine = ref(db, `seeks/${tc}/${me.uid}`), mref = ref(db, 'matches/' + me.uid);
+  const key = tc + (o.arena ? '~' + o.arena : '');
+  const qref = ref(db, 'seeks/' + key), mine = ref(db, `seeks/${key}/${me.uid}`), mref = ref(db, 'matches/' + me.uid);
   let cancelled = false, unsub: (() => void) | null = null;
   let opp: { uid: string; name: string; rating: number } | null = null;
   remove(mref).catch(() => {}).then(() => runTransaction(qref, (cur: Record<string, { name: string; rating: number; t: number }> | null) => {
@@ -66,7 +82,7 @@ export function seek(tc: string, me: Profile, onMatched: (gid: string) => void):
       const w = meWhite ? { uid: me.uid, name: me.name, rating: ratingOf(me, sp) } : opp;
       const b = meWhite ? opp : { uid: me.uid, name: me.name, rating: ratingOf(me, sp) };
       const gref = push(ref(db, 'games'));
-      await set(gref, { ...newGameData(tc, true), white: w.uid, black: b.uid, wName: w.name, bName: b.name, wRating: w.rating, bRating: b.rating, status: 'started' });
+      await set(gref, { ...newGameData(tc, true, o), white: w.uid, black: b.uid, wName: w.name, bName: b.name, wRating: w.rating, bRating: b.rating, status: 'started' });
       await set(ref(db, 'matches/' + opp.uid), gref.key);
       if (!cancelled) onMatched(gref.key!);
       return;
@@ -98,12 +114,12 @@ export function watchSeeks(cb: (counts: Record<string, number>) => void) {
 }
 
 // ---------------------------------------------------------------- партия с другом по ссылке (без рейтинга)
-export async function createFriendGame(tc: string, me: Profile, color: 'white' | 'black' | 'random', invited?: string): Promise<string> {
+export async function createFriendGame(tc: string, me: Profile, color: 'white' | 'black' | 'random', invited?: string, o: GameOpts = {}): Promise<string> {
   const white = color === 'white' || (color === 'random' && Math.random() < 0.5);
   const sp = speedOf(parseTcStr(tc).base, parseTcStr(tc).inc);
   const gref = push(ref(db, 'games'));
   const seat = white ? { white: me.uid, wName: me.name, wRating: ratingOf(me, sp) } : { black: me.uid, bName: me.name, bRating: ratingOf(me, sp) };
-  await set(gref, { ...newGameData(tc, false), ...seat, host: me.uid, status: 'open', ...(invited ? { invited } : {}) });
+  await set(gref, { ...newGameData(tc, !!o.rated, o), ...seat, host: me.uid, status: 'open', ...(invited ? { invited } : {}) });
   return gref.key!;
 }
 export function joinGame(gid: string, me: Profile) {
@@ -124,14 +140,15 @@ export function sendMove(gid: string, uci: string, color: 0 | 1) {
     if (g.status !== 'started') return;
     const ms = g.moves ? g.moves.split(' ') : [];
     if ((ms.length & 1) !== color) return;
-    const pos = posAt(START_FEN, ms, ms.length);
+    const pos = posAt(startOf(g), ms, ms.length);
+    if (pos.side !== color) return;
     const rec = play(pos, uci);
     if (!rec) return;
     const now = serverNow(), key = color === 0 ? 'w' : 'b';
     if (ms.length >= 2) {
       const left = g.clock[key] - (now - g.clock.last);
       if (left <= 0) return finishOnTime(g, ms, color);
-      g.clock[key] = Math.round(left + g.inc);
+      g.clock[key] = g.daily ? g.base : Math.round(left + g.inc); // «ход в день»: время на ход каждый раз заново
     }
     g.clock.last = now;
     ms.push(rec.uci);
@@ -146,7 +163,7 @@ function finishOnTime(g: OGame, ms: string[], loser: 0 | 1) {
   g.clock[loser === 0 ? 'w' : 'b'] = 0;
   g.status = 'over';
   // у победителя один король — ничья
-  const pos = posAt(START_FEN, ms, ms.length);
+  const pos = posAt(startOf(g), ms, ms.length);
   let material = false;
   for (let sq = 0; sq < 128; sq++) { if (sq & 0x88) continue; const p = pos.board[sq]; if (p && (p >> 3) === (loser ^ 1) && (p & 7) !== 6) material = true; }
   g.result = material ? (loser === 0 ? '0-1' : '1-0') : '1/2-1/2';
@@ -220,6 +237,7 @@ export async function recordStart(g: OGame, uid: string) {
   const s = await get(r);
   if (s.exists()) return;
   const ug: UserGame = { opp: (color === 0 ? g.black : g.white) || '', oppName: (color === 0 ? g.bName : g.wName) || '', color: color as 0 | 1, tc: g.tc, speed: g.speed, rated: g.rated, date: Date.now(), pending: true };
+  if (g.daily) ug.daily = true;
   await set(r, ug);
 }
 
@@ -231,8 +249,9 @@ export async function settle(g: OGame, uid: string): Promise<number | null> {
   const ugRef = ref(db, `userGames/${uid}/${g.id}`);
   if (g.status === 'aborted') { await remove(ugRef).catch(() => {}); return null; }
   if (g.status !== 'over' || !g.result) return null;
+  const op = openingOf(g);
   if (g.settled && g.settled[uid] !== undefined) {
-    update(ugRef, { pending: null, result: g.result, reason: g.reason || '', delta: g.settled[uid] }).catch(() => {});
+    update(ugRef, { pending: null, result: g.result, reason: g.reason || '', delta: g.settled[uid], ...(op ? { op } : {}) }).catch(() => {});
     return g.settled[uid];
   }
   const score = g.result === '1/2-1/2' ? 0.5 : (g.result === '1-0') === (color === 0) ? 1 : 0;
@@ -244,18 +263,22 @@ export async function settle(g: OGame, uid: string): Promise<number | null> {
   const delta = g.rated ? Math.round((n < 20 ? 40 : 20) * (score - expected(my, opp))) : 0;
   const t = await runTransaction(ref(db, `games/${g.id}/settled/${uid}`), (cur) => (cur === null ? delta : undefined));
   if (!t.committed) return t.snapshot.val();
+  let newRating = 0;
   await runTransaction(ref(db, 'users/' + uid), (cur) => {
     if (!cur) return cur;
     if (g.rated) {
       cur.ratings = cur.ratings || {};
       cur.ratings[g.speed] = Math.max(100, (cur.ratings[g.speed] || DEFAULT_RATING) + delta);
+      newRating = cur.ratings[g.speed];
       cur.games = cur.games || {};
       cur.games[g.speed] = (cur.games[g.speed] || 0) + 1;
     }
     if (score === 1) cur.wins = (cur.wins || 0) + 1; else if (score === 0) cur.losses = (cur.losses || 0) + 1; else cur.draws = (cur.draws || 0) + 1;
     return cur;
   });
-  await update(ugRef, { pending: null, result: g.result, reason: g.reason || '', delta }).catch(() => {});
+  await update(ugRef, { pending: null, result: g.result, reason: g.reason || '', delta, ...(op ? { op } : {}) }).catch(() => {});
+  // история рейтинга для графика
+  if (g.rated && newRating) push(ref(db, `users/${uid}/hist/${g.speed}`), { r: newRating, t: Date.now() }).catch(() => {});
   return delta;
 }
 // партии, закончившиеся без нас (закрыли вкладку), учитываются при следующем входе
@@ -283,4 +306,52 @@ export async function leaderboard(sp: Speed, n = 10): Promise<{ uid: string; nam
   const out: { uid: string; name: string; rating: number; games: number }[] = [];
   s.forEach((c) => { const u = c.val(); if (u.games && u.games[sp] > 0) out.push({ uid: c.key!, name: u.name, rating: u.ratings[sp], games: u.games[sp] }); });
   return out.sort((a, b) => b.rating - a.rating).slice(0, n);
+}
+
+// название дебюта партии: последняя позиция из справочника дебютов
+export function openingOf(g: { fen?: string; moves?: string }): string | null {
+  if (g.fen) return null;
+  const ms = g.moves ? g.moves.split(' ') : [];
+  const p = newPos(START_FEN);
+  let name: string | null = null;
+  for (let i = 0; i < ms.length && i < 30; i++) {
+    const m = p.uciToMove(ms[i]);
+    if (!m) break;
+    p.make(m);
+    try { const n = p.openingName(); if (n) name = n; } catch { break; }
+  }
+  return name;
+}
+
+// ---------------------------------------------------------------- реванш и чат
+// реванш: новая партия с теми же условиями и сменой цветов; если соперник уже предложил — принимаем его
+export async function rematch(g: OGame, me: Profile): Promise<string | null> {
+  const my: 0 | 1 = g.white === me.uid ? 0 : 1;
+  const opp = my === 0 ? g.black : g.white;
+  if (!opp) return null;
+  if (g.rematch && g.rematch.by !== me.uid) {
+    const r = await joinGame(g.rematch.gid, me);
+    return r.committed ? g.rematch.gid : null;
+  }
+  if (g.rematch) return g.rematch.gid;
+  const gid = await createFriendGame(g.tc, me, my === 0 ? 'black' : 'white', opp, { rated: g.rated, daily: g.daily });
+  const t = await runTransaction(ref(db, `games/${g.id}/rematch`), (cur) => (cur ? undefined : { gid, by: me.uid }));
+  if (!t.committed) { // соперник успел первым — принимаем его реванш
+    await abort(gid);
+    const other = t.snapshot.val() as { gid: string } | null;
+    if (other) { const r = await joinGame(other.gid, me); return r.committed ? other.gid : null; }
+    return null;
+  }
+  return gid;
+}
+export async function sendChat(gid: string, me: Profile, m: string) {
+  await push(ref(db, `games/${gid}/chat`), { u: me.uid, n: me.name, m: m.slice(0, 200), t: Date.now() });
+}
+
+// идущие партии для наблюдения
+export async function liveGames(n = 20): Promise<OGame[]> {
+  const s = await get(query(ref(db, 'games'), orderByChild('status'), equalTo('started'), limitToLast(n)));
+  const out: OGame[] = [];
+  s.forEach((c) => { out.push({ id: c.key!, ...c.val() }); });
+  return out.reverse();
 }

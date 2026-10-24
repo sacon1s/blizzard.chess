@@ -5,7 +5,7 @@ import { PIECE_SETS, pieceImgs } from '../lib/pieces';
 
 export default function SettingsPage() {
   const s = useSettings();
-  const toggle = (k: 'sound' | 'showCoords' | 'autoQueen' | 'premove', label: string, hint: string) => (
+  const toggle = (k: 'sound' | 'showCoords' | 'autoQueen' | 'premove' | 'chat', label: string, hint: string) => (
     <label className="toggle-row">
       <span><b>{label}</b><span className="muted">{hint}</span></span>
       <span className="switch"><input type="checkbox" checked={s[k]} onChange={(e) => settings.set({ [k]: e.target.checked })} /><span /></span>
@@ -41,6 +41,16 @@ export default function SettingsPage() {
         {toggle('showCoords', 'Coordinates', 'Letters and numbers on the board edge')}
         {toggle('autoQueen', 'Always promote to a queen', 'Skip the piece choice when a pawn promotes')}
         {toggle('premove', 'Premoves', 'Make your next move while the opponent is thinking. Right-click cancels it')}
+        {toggle('chat', 'Chat in online games', 'Show messages from your opponent')}
+        <label className="toggle-row">
+          <span><b>Browser notifications</b><span className="muted">A notice when a friend challenges you while the tab is in the background</span></span>
+          <span className="switch"><input type="checkbox" checked={s.notify} onChange={(e) => {
+            const on = e.target.checked;
+            if (on && 'Notification' in window && Notification.permission !== 'granted') {
+              Notification.requestPermission().then((p) => settings.set({ notify: p === 'granted' }), () => {});
+            } else settings.set({ notify: on });
+          }} /><span /></span>
+        </label>
         <h2 className="label">Sound</h2>
         {toggle('sound', 'Move sounds', 'A click for moves, captures, castling and checks')}
       </section>
