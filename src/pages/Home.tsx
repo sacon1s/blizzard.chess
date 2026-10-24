@@ -1,5 +1,5 @@
-// Главная: метель, доска сама разыгрывает «оперную партию» Морфи, ниже — разделы сайта.
-import { useEffect, useMemo, useRef, useState } from 'react';
+// Главная: доска сама разыгрывает «оперную партию» Морфи, ниже — разделы сайта.
+import { useEffect, useMemo, useState } from 'react';
 import Board from '../components/Board';
 import { Icon } from '../components/icons';
 import { E, START_FEN, newPos, play, type MoveRec } from '../lib/chess';
@@ -9,45 +9,6 @@ import { go } from '../lib/router';
 import { GameRow } from './Review';
 
 const OPERA = '1. e4 e5 2. Nf3 d6 3. d4 Bg4 4. dxe5 Bxf3 5. Qxf3 dxe5 6. Bc4 Nf6 7. Qb3 Qe7 8. Nc3 c6 9. Bg5 b5 10. Nxb5 cxb5 11. Bxb5+ Nbd7 12. O-O-O Rd8 13. Rxd7 Rxd7 14. Rd1 Qe6 15. Bxd7+ Nxd7 16. Qb8+ Nxb8 17. Rd8#';
-
-function Snow() {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const cv = ref.current!;
-    const ctx = cv.getContext('2d')!;
-    const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let w = 0, h = 0, raf = 0;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const flakes: { x: number; y: number; r: number; v: number; d: number; a: number }[] = [];
-    function size() {
-      w = cv.clientWidth; h = cv.clientHeight;
-      cv.width = w * dpr; cv.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const want = Math.round((w * h) / 2600);
-      while (flakes.length < want) flakes.push({ x: Math.random() * w, y: Math.random() * h, r: 0.4 + Math.random() * 1.9, v: 0.6 + Math.random() * 2.6, d: Math.random() * 6.28, a: 0.25 + Math.random() * 0.6 });
-      flakes.length = want;
-    }
-    size();
-    window.addEventListener('resize', size);
-    let t = 0;
-    function frame() {
-      t += 0.01;
-      ctx.clearRect(0, 0, w, h);
-      for (const f of flakes) {
-        f.x += f.v * (2.2 + Math.sin(t + f.d) * 0.6);
-        f.y += f.v * 0.45 + Math.sin(t * 2 + f.d) * 0.3;
-        if (f.x > w + 6) { f.x = -6; f.y = Math.random() * h; }
-        if (f.y > h + 6) f.y = -6;
-        ctx.globalAlpha = f.a;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.ellipse(f.x, f.y, f.r * (1 + f.v * 0.5), f.r, 0.12, 0, 6.283); ctx.fill();
-      }
-      if (!still) raf = requestAnimationFrame(frame);
-    }
-    frame();
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', size); };
-  }, []);
-  return <canvas ref={ref} className="snow" aria-hidden="true" />;
-}
 
 function DemoBoard() {
   const s = useSettings();
@@ -76,7 +37,6 @@ export default function Home() {
   return (
     <div className="home">
       <section className="hero">
-        <Snow />
         <div className="hero-text">
           <h1>Blizzard<br />Chess</h1>
           <p className="lede">Play people and bots, review every game with a 3200-rated engine and solve puzzles. All of it free.</p>

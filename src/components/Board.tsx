@@ -1,7 +1,8 @@
 // Доска: ход перетаскиванием или двумя щелчками, выбор фигуры при превращении, анимация хода,
 // стрелки движка и свои пометки правой кнопкой (поле — щелчок, стрелка — протянуть; Shift/Ctrl/Alt — другой цвет).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import PIECE_IMG from '../lib/pieces';
+import { pieceImgs } from '../lib/pieces';
+import { useSettings } from '../lib/store';
 import { newPos, targetsFrom, pieceKey, sqName, parseSq } from '../lib/chess';
 import { MOVE_CLASS_ICONS } from './icons';
 
@@ -62,6 +63,7 @@ function arrowPoly(f: number, t: number, o: 0 | 1, color: string, opacity: numbe
 
 export default function Board(p: BoardProps) {
   const o = p.orientation;
+  const PIECE_IMG = pieceImgs(useSettings().pieces);
   const pos = useMemo(() => newPos(p.fen), [p.fen]);
   const [sel, setSel] = useState(-1);
   const [marks, setMarks] = useState<Map<string, string>>(new Map());

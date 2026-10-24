@@ -18,9 +18,9 @@ function makeStore<T extends object>(key: string, def: T) {
   };
 }
 
-export interface Settings { theme: string; sound: boolean; showCoords: boolean; autoQueen: boolean; botLevel: number; botColor: 'white' | 'black' | 'random'; botClock: string }
+export interface Settings { skin: string; pieces: string; theme: string; sound: boolean; showCoords: boolean; autoQueen: boolean; botLevel: number; botColor: 'white' | 'black' | 'random'; botClock: string }
 export const settings = makeStore<Settings>('settings', {
-  theme: 'snow', sound: true, showCoords: true, autoQueen: false, botLevel: 5, botColor: 'random', botClock: 'none',
+  skin: 'dark', pieces: 'maestro', theme: 'brown', sound: true, showCoords: true, autoQueen: false, botLevel: 5, botColor: 'random', botClock: 'none',
 });
 export function useSettings(): Settings {
   return useSyncExternalStore(settings.subscribe, settings.get);
@@ -41,11 +41,17 @@ export function getGame(id: string): SavedGame | null { return savedGames().find
 export const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
 export const THEMES = [
-  { v: 'snow', label: 'Snow', a: '#dedede', b: '#8f8f8f' },
-  { v: 'dusk', label: 'Dusk', a: '#ebe6f3', b: '#8b7db6' },
-  { v: 'walnut', label: 'Walnut', a: '#ecd7b5', b: '#a6774f' },
-  { v: 'marble', label: 'Marble', a: '#e2e2de', b: '#84898f' },
+  { v: 'brown', label: 'Brown', a: '#f0d9b5', b: '#b58863' },
+  { v: 'green', label: 'Green', a: '#eeeed2', b: '#769656' },
+  { v: 'blue', label: 'Blue', a: '#dee3e6', b: '#8ca2ad' },
   { v: 'ice', label: 'Ice', a: '#e6eef4', b: '#7d98ad' },
+  { v: 'dusk', label: 'Dusk', a: '#ebe6f3', b: '#8b7db6' },
+  { v: 'marble', label: 'Marble', a: '#e2e2de', b: '#84898f' },
+  { v: 'snow', label: 'Grey', a: '#dedede', b: '#8f8f8f' },
+];
+export const SKINS = [
+  { v: 'dark', label: 'Dark' },
+  { v: 'light', label: 'Light' },
 ];
 
 // кэш разборов: оценки позиций по id партии (последние 30)

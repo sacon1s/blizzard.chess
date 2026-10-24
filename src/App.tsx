@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useRoute, go } from './lib/router';
 import { useAuth } from './lib/auth';
 import { settlePending } from './lib/online';
+import { useSettings } from './lib/store';
 import { Icon } from './components/icons';
 import Home from './pages/Home';
 import Bots from './pages/Bots';
@@ -30,7 +31,8 @@ function Rail({ section }: { section: string }) {
   return (
     <nav className="rail" aria-label="Main">
       <a className="rail-brand" href="#/" aria-label="Blizzard Chess home">
-        <img src="logo.svg" alt="" className="logo" />
+        <img src="logo.svg" alt="" className="logo logo-light" />
+        <img src="logo-dark.svg" alt="" className="logo logo-dark" />
         <span className="wordmark">Blizzard</span>
       </a>
       <div className="rail-items">
@@ -54,6 +56,8 @@ export default function App() {
   const { parts, query } = useRoute();
   const section = parts[0] || '';
   const { user } = useAuth();
+  const { skin } = useSettings();
+  useEffect(() => { document.documentElement.dataset.skin = skin; }, [skin]);
   const uid = user ? user.uid : '';
   useEffect(() => { if (uid) settlePending(uid); }, [uid]);
   useEffect(() => {

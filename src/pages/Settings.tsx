@@ -1,6 +1,7 @@
 // Настройки: доска, звук, координаты, автоферзь.
 import Board from '../components/Board';
-import { settings, useSettings, THEMES } from '../lib/store';
+import { settings, useSettings, THEMES, SKINS } from '../lib/store';
+import { PIECE_SETS, pieceImgs } from '../lib/pieces';
 
 export default function SettingsPage() {
   const s = useSettings();
@@ -14,6 +15,19 @@ export default function SettingsPage() {
     <div className="page narrow">
       <header className="page-head"><h1>Settings</h1><p>Saved in this browser.</p></header>
       <section className="settings">
+        <h2 className="label">Theme</h2>
+        <div className="seg">
+          {SKINS.map((k) => <button key={k.v} aria-pressed={s.skin === k.v} onClick={() => settings.set({ skin: k.v })}>{k.label}</button>)}
+        </div>
+        <h2 className="label">Pieces</h2>
+        <div className="themes">
+          {Object.entries(PIECE_SETS).map(([k, v]) => (
+            <button key={k} className="theme" aria-pressed={s.pieces === k} onClick={() => settings.set({ pieces: k })}>
+              <img src={pieceImgs(k).wN} alt="" width={26} height={26} />{v.label}
+            </button>
+          ))}
+        </div>
+        <p className="muted small credit">{PIECE_SETS[s.pieces] ? `${PIECE_SETS[s.pieces].label} pieces by ${PIECE_SETS[s.pieces].author}, ${PIECE_SETS[s.pieces].license}.` : ''}</p>
         <h2 className="label">Board</h2>
         <div className="themes">
           {THEMES.map((t) => (

@@ -1,6 +1,6 @@
 # Blizzard Chess
 
-Free chess site: play Blizzard bots of every strength, review your games with the engine, analyse positions. Online games with accounts and puzzles are coming next.
+Free chess site: play Blizzard bots of every strength, review your games with the engine, analyse positions. Play online with accounts and ratings. Puzzles are coming next.
 
 Live: https://sacon1s.github.io/blizzard.chess/
 
@@ -14,4 +14,4 @@ npm run dev      # local server
 npm run build    # builds the site into docs/ (GitHub Pages serves main /docs)
 ```
 
-Fonts: Archivo and Golos Text (SIL Open Font License, see `LICENSES/`). Pieces: cburnett by Colin M. L. Burnett (GPL). Move sounds: Kenney (CC0).
+Fonts: Archivo and Golos Text (SIL Open Font License, see `LICENSES/`). Pieces: Maestro and other sets from the lichess.org collection, each under its author's license (see `LICENSES/pieces.md`). Move sounds: Kenney (CC0).
