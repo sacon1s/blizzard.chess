@@ -26,7 +26,7 @@ export interface GameEnd { result: '1-0' | '0-1' | '1/2-1/2'; reason: string }
 export const REASONS: Record<string, string> = {
   checkmate: 'Checkmate', stalemate: 'Stalemate', repetition: 'Threefold repetition', fifty: 'Fifty-move rule',
   material: 'Insufficient material', resign: 'Resignation', agreement: 'Draw by agreement', time: 'Time out',
-  abandon: 'Opponent left',
+  abandon: 'A player left the game', timevsmaterial: 'Time out vs insufficient material',
 };
 
 export function newPos(fen: string = START_FEN): Pos {

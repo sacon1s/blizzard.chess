@@ -1,0 +1,45 @@
+{
+  "rules": {
+    "users": {
+      ".read": true,
+      ".indexOn": ["ratings/bullet", "ratings/blitz", "ratings/rapid", "ratings/classical"],
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['name', 'ratings'])"
+      }
+    },
+    "names": {
+      ".read": true,
+      "$name": {
+        ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid"
+      }
+    },
+    "online": {
+      ".read": true,
+      "$uid": { ".write": "auth != null && auth.uid === $uid" }
+    },
+    "seeks": {
+      ".read": "auth != null",
+      "$tc": { ".write": "auth != null" }
+    },
+    "matches": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null"
+      }
+    },
+    "games": {
+      ".read": true,
+      "$gid": {
+        ".write": "auth != null && (data.exists() ? (data.child('white').val() === auth.uid || data.child('black').val() === auth.uid || data.child('status').val() === 'open') : (newData.child('white').val() === auth.uid || newData.child('black').val() === auth.uid))"
+      }
+    },
+    "userGames": {
+      "$uid": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === $uid",
+        ".indexOn": ["date"]
+      }
+    }
+  }
+}

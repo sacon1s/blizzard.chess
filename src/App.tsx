@@ -2,6 +2,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { useRoute, go } from './lib/router';
 import { useAuth } from './lib/auth';
+import { settlePending } from './lib/online';
 import { Icon } from './components/icons';
 import Home from './pages/Home';
 import Bots from './pages/Bots';
@@ -52,6 +53,9 @@ function Rail({ section }: { section: string }) {
 export default function App() {
   const { parts, query } = useRoute();
   const section = parts[0] || '';
+  const { user } = useAuth();
+  const uid = user ? user.uid : '';
+  useEffect(() => { if (uid) settlePending(uid); }, [uid]);
   useEffect(() => {
     const titles: Record<string, string> = { online: 'Play online', game: 'Online game', bots: 'Play a bot', play: 'Bot game', puzzles: 'Puzzles', review: 'Game review', analysis: 'Analysis', login: 'Sign in', profile: 'Profile', settings: 'Settings' };
     document.title = titles[section] ? `${titles[section]} | Blizzard Chess` : 'Blizzard Chess';

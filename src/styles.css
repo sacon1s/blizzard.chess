@@ -394,6 +394,61 @@ input:focus, textarea:focus { outline: none; border-color: #fff; }
 .toggle-row > span:first-child { display: flex; flex-direction: column; }
 .toggle-row .muted { font-size: 13.5px; }
 
+/* ===================================================================== онлайн */
+.small { font-size: 13.5px; }
+.notice { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--raised); border: 1px solid var(--line-2); font-size: 14px; }
+.notice.warn { border-color: #6b5520; }
+.notice.big { flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; margin-bottom: 28px; font-size: 15px; }
+.online-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 36px; align-items: start; }
+.section-gap { margin-top: 36px; }
+.tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.tc {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 16px 16px 14px; min-height: 92px;
+  border-radius: 14px; border: 1px solid var(--line); background: var(--panel); text-align: left;
+}
+.tc b { font: 700 24px/1.1 var(--disp); font-stretch: 112%; letter-spacing: -.02em; }
+.tc span { color: var(--muted); font-size: 13px; }
+.tc small { position: absolute; top: 14px; right: 14px; color: var(--faint); font-size: 12px; font-weight: 600; }
+.tc:hover:not(:disabled) { border-color: var(--line-2); background: var(--raised); }
+.tc.on, .tc.on:hover:not(:disabled) { background: #fff; color: #000; border-color: #fff; }
+.tc.on span { color: #333; }
+.tc:disabled { opacity: .5; cursor: not-allowed; }
+.tc .waiting { position: absolute; right: 14px; bottom: 14px; }
+.waiting { display: inline-flex; gap: 5px; }
+.waiting i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: blink 1.2s infinite; }
+.waiting i:nth-child(2) { animation-delay: .2s; }
+.waiting i:nth-child(3) { animation-delay: .4s; }
+.friend { display: flex; flex-direction: column; gap: 14px; max-width: 520px; }
+.friend .field + .field { margin-top: 0; }
+.side-box { padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); margin-bottom: 14px; display: flex; flex-direction: column; gap: 12px; }
+.side-box .label { margin: 0; }
+.seg.small button { padding: 6px 4px; font-size: 12.5px; }
+.leaders { margin: 0; padding: 0; list-style: none; counter-reset: lb; }
+.leaders li { counter-increment: lb; display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--line); }
+.leaders li::before { content: counter(lb); width: 20px; color: var(--faint); font-size: 13px; font-variant-numeric: tabular-nums; }
+.leaders a { flex: 1; text-decoration: none; font-weight: 600; }
+.leaders b { font-variant-numeric: tabular-nums; }
+.tc-chip { width: 40px; height: 40px; border-radius: 10px; background: var(--raised-2); display: grid; place-items: center; flex: none; }
+.tc-chip svg { width: 22px; height: 22px; }
+.invite { text-align: left; }
+.invite > p { margin-bottom: 22px; }
+.copy-row { display: flex; gap: 8px; margin-bottom: 22px; }
+.copy-row input { font-family: var(--mono); font-size: 13px; }
+.invite .waiting { display: flex; margin: 4px 0 20px; color: var(--muted); }
+.invite .btn.big { margin-bottom: 12px; }
+.profile-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+.ratings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 36px; }
+.rating { display: flex; flex-direction: column; gap: 4px; padding: 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); }
+.rating span { color: var(--muted); font-size: 13px; font-weight: 600; }
+.rating b { font: 800 36px/1 var(--disp); font-stretch: 112%; letter-spacing: -.02em; }
+.rating small { color: var(--faint); font-size: 12.5px; }
+.profile-games { max-width: 720px; }
+@media (max-width: 860px) {
+  .online-grid { grid-template-columns: 1fr; }
+  .ratings { grid-template-columns: 1fr 1fr; }
+  .notice.big { flex-direction: column; align-items: flex-start; }
+}
+
 /* ===================================================================== узкие экраны */
 @media (max-width: 1100px) {
   :root { --panel-w: 320px; }
