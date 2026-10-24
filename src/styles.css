@@ -168,6 +168,7 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .sq.check { background-image: radial-gradient(circle, rgba(255, 40, 30, .95) 0, rgba(230, 30, 20, .6) 30%, rgba(200, 0, 0, 0) 70%); }
 .sq.target::after { content: ''; position: absolute; inset: 36%; border-radius: 50%; background: rgba(0, 0, 0, .18); z-index: 3; pointer-events: none; }
 .sq.cap::after { content: ''; position: absolute; inset: 3%; border-radius: 50%; border: 6px solid rgba(0, 0, 0, .18); z-index: 3; pointer-events: none; }
+.sq.hint::before { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 4px var(--accent); background: rgba(61, 138, 214, .25); z-index: 1; }
 .sq.hover { box-shadow: inset 0 0 0 4px rgba(255, 255, 255, .75); }
 .mark { position: absolute; inset: 0; opacity: .72; z-index: 1; }
 .coord { position: absolute; font: 700 clamp(9px, calc(var(--bs) / 48), 13px)/1 var(--ui); z-index: 2; pointer-events: none; }
@@ -436,12 +437,42 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .invite .waiting { display: flex; margin: 4px 0 20px; color: var(--muted); }
 .invite .btn.big { margin-bottom: 12px; }
 .profile-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
-.ratings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 36px; }
+.ratings { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 36px; }
 .rating { display: flex; flex-direction: column; gap: 4px; padding: 18px; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--panel); }
 .rating span { color: var(--muted); font-size: 13px; font-weight: 600; }
 .rating b { font: var(--disp-weight) 36px/1 var(--disp); font-stretch: var(--disp-stretch); letter-spacing: -.02em; }
 .rating small { color: var(--faint); font-size: 12.5px; }
 .profile-games { max-width: 720px; }
+
+.coach-head { display: flex; justify-content: flex-end; margin-bottom: -6px; }
+.small-switch { font-size: 13px; color: var(--muted); }
+.small-switch > span { width: 32px; height: 19px; }
+.small-switch > span::after { width: 13px; height: 13px; }
+.small-switch input:checked + span::after { transform: translateX(13px); }
+.small-btn { padding: 6px 10px; font-size: 13px; margin-top: 8px; }
+
+/* ===================================================================== задачи */
+.puzzle-bar { gap: 12px; font-size: 16px; }
+.turn { width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--line-2); flex: none; }
+.turn.white { background: #f4f4f2; }
+.turn.black { background: #1d1c1a; }
+.puzzle-rating { display: flex; align-items: baseline; gap: 10px; padding: 4px 2px; }
+.puzzle-rating span { color: var(--muted); font-size: 13px; font-weight: 600; flex: 1; }
+.puzzle-rating b { font: 700 30px/1 var(--ui); font-variant-numeric: tabular-nums; }
+.puzzle-rating em { font-style: normal; font-weight: 700; }
+.puzzle-rating em.up { color: var(--c-best); }
+.puzzle-rating em.down { color: var(--c-blunder); }
+.puzzle-msg { padding: 14px; border-radius: var(--r-lg); background: var(--raised); border-left: 3px solid var(--line-2); font-size: 14.5px; }
+.puzzle-msg .muted { display: block; margin-top: 4px; font-size: 13px; }
+.puzzle-msg.wrong, .puzzle-msg.failed { border-left-color: var(--c-blunder); }
+.puzzle-msg.solved { border-left-color: var(--c-best); }
+.puzzle-meta { display: flex; flex-direction: column; gap: 2px; color: var(--muted); font-size: 13.5px; }
+.puzzle-meta b { color: var(--text); }
+.puzzle .actions .btn.big { grid-column: 1 / -1; }
+.history { display: flex; flex-wrap: wrap; gap: 4px; min-height: 12px; }
+.history i { width: 12px; height: 12px; border-radius: 3px; }
+.history i.ok { background: var(--c-best); }
+.history i.bad { background: var(--c-blunder); }
 
 /* ===================================================================== узкие экраны */
 @media (max-width: 1100px) {

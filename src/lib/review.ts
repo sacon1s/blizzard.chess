@@ -41,6 +41,21 @@ export function winPct(e: Entry | null | undefined): number | null {
   return E.winPercent(e.cp, e.mate);
 }
 
+// класс одного хода по оценкам позиции до и после него
+export function classifyOne(mv: RMove, a: Entry, b: Entry, prevErr = false): Cls {
+  const mover = mv.color;
+  const pov = (e: Entry) => (mover === 0 ? { cp: e.cp, mate: e.mate } : { cp: e.cp === null ? null : -e.cp, mate: e.mate === null ? null : -e.mate });
+  const before = pov(a), after = pov(b);
+  const matedNow = !!b.terminal && after.mate !== null && after.mate > 0;
+  const r = E.classifyMove({ before, after, isBest: mv.uci === a.best || matedNow, sacrifice: mv.sac, book: mv.book, prevErr });
+  return { cls: r.cls, loss: r.loss, accuracy: r.accuracy, before, after };
+}
+// ход с пометками «из книги» и «жертва»
+export function richMove(rec: MoveRec): RMove {
+  const p = newPos(rec.fenBefore), m = p.uciToMove(rec.uci);
+  const bm = p.bookMoves();
+  return { ...rec, sac: m ? E.isSacrifice(p, m) : false, book: !!(bm && bm.some((x: any) => x.m === m && x.n >= 3)) };
+}
 // классы всех ходов по готовым оценкам (entries[i] — позиция перед ходом i)
 export function classifyAll(moves: RMove[], entries: (Entry | null)[]): (Cls | null)[] {
   const out: (Cls | null)[] = [];
@@ -48,13 +63,7 @@ export function classifyAll(moves: RMove[], entries: (Entry | null)[]): (Cls | n
     const a = entries[k], b = entries[k + 1];
     if (!a || !b) { out.push(null); continue; }
     const prev = out[k - 1];
-    const prevErr = !!(prev && ['mistake', 'blunder', 'miss'].includes(prev.cls));
-    const mover = moves[k].color;
-    const pov = (e: Entry) => (mover === 0 ? { cp: e.cp, mate: e.mate } : { cp: e.cp === null ? null : -e.cp, mate: e.mate === null ? null : -e.mate });
-    const before = pov(a), after = pov(b);
-    const matedNow = !!b.terminal && after.mate !== null && after.mate > 0;
-    const r = E.classifyMove({ before, after, isBest: moves[k].uci === a.best || matedNow, sacrifice: moves[k].sac, book: moves[k].book, prevErr });
-    out.push({ cls: r.cls, loss: r.loss, accuracy: r.accuracy, before, after });
+    out.push(classifyOne(moves[k], a, b, !!(prev && ['mistake', 'blunder', 'miss'].includes(prev.cls))));
   }
   return out;
 }

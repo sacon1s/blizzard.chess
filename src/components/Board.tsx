@@ -19,6 +19,7 @@ export interface BoardProps {
   theme?: string;
   coords?: boolean;
   autoQueen?: boolean;
+  highlight?: number | null; // поле-подсказка
 }
 
 const MARK_COLORS: Record<string, string> = { o: '#f0a33a', g: '#5fbf6a', r: '#e2534b', b: '#4aa3df' };
@@ -178,6 +179,7 @@ export default function Board(p: BoardProps) {
     if (p.lastMove && (sq === p.lastMove.from || sq === p.lastMove.to)) cls.push('last');
     if (sq === sel) cls.push('sel');
     if (sq === checkSq) cls.push('check');
+    if (p.highlight === sq) cls.push('hint');
     if (t) cls.push(t.capture || piece ? 'cap' : 'target');
     if (drag && drag.hover === sq && t) cls.push('hover');
     const mark = marks.get(String(sq));

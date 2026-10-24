@@ -8,6 +8,7 @@ export type Speed = 'bullet' | 'blitz' | 'rapid' | 'classical';
 export interface Profile {
   uid: string; name: string; created: number; country?: string; bio?: string;
   ratings: Record<Speed, number>; games: Record<Speed, number>; wins: number; draws: number; losses: number;
+  puzzle?: { rating: number; solved: number; failed: number };
 }
 export const DEFAULT_RATING = 1200;
 export function speedOf(base: number, inc: number): Speed {

@@ -8,7 +8,7 @@ function write(k: string, v: unknown) {
   try { localStorage.setItem('bc.' + k, JSON.stringify(v)); } catch { /* недоступно */ }
 }
 
-function makeStore<T extends object>(key: string, def: T) {
+export function makeStore<T extends object>(key: string, def: T) {
   let value: T = Object.assign({}, def, read<Partial<T>>(key, {}));
   const subs = new Set<() => void>();
   return {
@@ -18,9 +18,9 @@ function makeStore<T extends object>(key: string, def: T) {
   };
 }
 
-export interface Settings { skin: string; pieces: string; theme: string; sound: boolean; showCoords: boolean; autoQueen: boolean; botLevel: number; botColor: 'white' | 'black' | 'random'; botClock: string }
+export interface Settings { skin: string; pieces: string; theme: string; sound: boolean; showCoords: boolean; autoQueen: boolean; botLevel: number; botColor: 'white' | 'black' | 'random'; botClock: string; coach: boolean }
 export const settings = makeStore<Settings>('settings', {
-  skin: 'dark', pieces: 'maestro', theme: 'brown', sound: true, showCoords: true, autoQueen: false, botLevel: 5, botColor: 'random', botClock: 'none',
+  skin: 'dark', pieces: 'maestro', theme: 'brown', sound: true, showCoords: true, autoQueen: false, botLevel: 5, botColor: 'random', botClock: 'none', coach: true,
 });
 export function useSettings(): Settings {
   return useSyncExternalStore(settings.subscribe, settings.get);

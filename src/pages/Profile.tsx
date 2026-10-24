@@ -50,6 +50,11 @@ export default function Profile({ name }: { name?: string }) {
             <small>{p.games && p.games[sp] ? `${p.games[sp]} rated` : 'no games yet'}</small>
           </div>
         ))}
+        <div className="rating">
+          <span>Puzzles</span>
+          <b>{p.puzzle ? Math.round(p.puzzle.rating) : 1200}</b>
+          <small>{p.puzzle ? `${p.puzzle.solved} solved` : 'none solved yet'}</small>
+        </div>
       </div>
       <section className="profile-games">
         <h2 className="label">Recent games</h2>

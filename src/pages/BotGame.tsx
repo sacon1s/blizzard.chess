@@ -11,8 +11,15 @@ import { BOTS, parseTc, tcLabel } from '../lib/bots';
 import { useSettings, saveGame, newId } from '../lib/store';
 import { go } from '../lib/router';
 import { useAuth } from '../lib/auth';
+import { entryFromInfo, terminalEntry, classifyOne, richMove, coachComment, type Entry, type Cls } from '../lib/review';
+import { MOVE_CLASS_ICONS } from '../components/icons';
+import { settings } from '../lib/store';
 
 const VALUE = [0, 1, 3, 3, 5, 9, 0];
+const VERDICT: Record<string, string> = {
+  brilliant: 'is brilliant', best: 'is best', excellent: 'is excellent', good: 'is good', book: 'is a book move',
+  inaccuracy: 'is an inaccuracy', miss: 'is a miss', mistake: 'is a mistake', blunder: 'is a blunder',
+};
 export function materialDiff(fen: string): number {
   const p = newPos(fen);
   let d = 0;
@@ -82,8 +89,49 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
     playSound(soundFor(rec));
     const end = gameEnd(pos.current);
     if (end) finish(end);
+    if (coachRef.current && rec.color === playerColor) runCoach(movesRef.current.length - 1);
     return true;
-  }, [tcCfg, finish]);
+  }, [tcCfg, finish]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // тренер: оценка каждого своего хода и совет, что было лучше
+  const coachRef = useRef(s.coach);
+  const [note, setNote] = useState<{ k: number; c: Cls; text: string[]; better: string | null; label: string } | null>(null);
+  const evals = useRef(new Map<string, Entry>());
+  const coachSeq = useRef(0);
+  async function evalAt(ucis: string[], fen: string): Promise<Entry | null> {
+    const key = ucis.join(' ');
+    const hit = evals.current.get(key);
+    if (hit) return hit;
+    const p = newPos(fen), end = gameEnd(p);
+    let e: Entry | null;
+    if (end) e = terminalEntry(end);
+    else {
+      const info = await analyst().go(START_FEN, ucis, { movetime: 450 });
+      if (info.stopped) return null;
+      e = entryFromInfo(info, p.side as 0 | 1);
+    }
+    if (e) evals.current.set(key, e);
+    return e;
+  }
+  async function runCoach(k: number) {
+    const seq = ++coachSeq.current;
+    const ms = movesRef.current.slice(0, k + 1), rec = ms[k], ucis = ms.map((m) => m.uci);
+    setNote(null);
+    const before = await evalAt(ucis.slice(0, k), rec.fenBefore);
+    if (seq !== coachSeq.current || !before) return;
+    const after = await evalAt(ucis, rec.fenAfter);
+    if (seq !== coachSeq.current || !after) return;
+    const rm = richMove(rec), c = classifyOne(rm, before, after);
+    const mv = [] as ReturnType<typeof richMove>[], en = [] as (Entry | null)[];
+    mv[k] = rm; en[k] = before; en[k + 1] = after;
+    const cc = coachComment(k, mv, en, c);
+    setNote({ k, c, text: cc.text, better: cc.better, label: rec.san });
+  }
+  function toggleCoach() {
+    const v = !coachRef.current;
+    coachRef.current = v; settings.set({ coach: v });
+    if (!v) { coachSeq.current++; setNote(null); }
+  }
 
   // ход бота
   useEffect(() => {
@@ -147,6 +195,7 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
     movesRef.current = movesRef.current.slice(0, n);
     pos.current = posAt(START_FEN, movesRef.current.map((m) => m.uci), n);
     setMoves(movesRef.current); setView(n); setHint(null);
+    coachSeq.current++; setNote(null);
   }
   async function askHint() {
     if (result || pos.current.side !== playerColor) return;
@@ -203,6 +252,30 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
               <button className="btn ghost" onClick={() => go('/bots')}>Other bot</button>
             </div>
           </div>
+        )}
+        {!result && (
+          <div className="coach-head">
+            <label className="switch small-switch"><input type="checkbox" checked={s.coach} onChange={toggleCoach} /><span />Coach</label>
+          </div>
+        )}
+        {!result && s.coach && (
+          note ? (
+            <div className={'coach cls-' + note.c.cls}>
+              <i className={'cls-icon cls-' + note.c.cls} aria-hidden="true">{MOVE_CLASS_ICONS[note.c.cls]}</i>
+              <div>
+                <b>{note.label} <em>{VERDICT[note.c.cls]}</em></b>
+                <p>{note.text.join(' ')}{note.better && <> Better was <strong>{note.better}</strong>.</>}</p>
+                {['mistake', 'blunder', 'miss'].includes(note.c.cls) && note.k >= moves.length - 2 && (
+                  <button className="btn small-btn" onClick={takeback}><Icon.undo />Take back and try again</button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="coach">
+              <span className="coach-av"><img src="logo.svg" alt="" /></span>
+              <div><b>Coach</b><p>{moves.some((m) => m.color === playerColor) ? 'Looking at your move…' : 'Make a move and I’ll tell you how good it was.'}</p></div>
+            </div>
+          )
         )}
         <MoveList moves={moves} view={view} onView={onView} />
         <NavButtons view={view} total={live} onView={onView} onFlip={() => setOrient((orient ^ 1) as 0 | 1)} />
