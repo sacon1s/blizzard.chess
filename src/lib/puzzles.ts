@@ -8,7 +8,7 @@ export interface Puzzle { id: string; fen: string; moves: string[]; rating: numb
 export interface PuzzleStats {
   rating: number; solved: number; failed: number; seen: string[]; history: { id: string; ok: boolean; rating: number }[];
 }
-export const puzzleStats = makeStore<PuzzleStats>('puzzles', { rating: 1200, solved: 0, failed: 0, seen: [], history: [] });
+export const puzzleStats = makeStore<PuzzleStats>('puzzles', { rating: 1000, solved: 0, failed: 0, seen: [], history: [] });
 export function usePuzzleStats(): PuzzleStats { return useSyncExternalStore(puzzleStats.subscribe, puzzleStats.get); }
 
 // win — решена с первой попытки, fail — ошибка или показано решение, hint — решена с подсказкой (рейтинг не меняется)

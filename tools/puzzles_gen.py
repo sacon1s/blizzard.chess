@@ -98,7 +98,7 @@ def build(start, blunder, p):
     board.push(m1)
     player = p.turn
     mate_line = is_mate(s1) and s1 > 0
-    for _ in range(3):
+    for _ in range(3 if mate_line else 1):
         if board.is_game_over():
             break
         reply = ana.analyse(board, chess.engine.Limit(nodes=500_000))
@@ -121,8 +121,6 @@ def build(start, blunder, p):
         return None
     nplayer = (len(sol) + 1) // 2
     first_capture = p.is_capture(m1)
-    if nplayer == 1 and not mated and first_capture and random.random() < 0.6:
-        return None  # простое взятие — оставляем только часть таких задач
     d = depth_found(p, m1)
     rating = 450 + 140 * d + 170 * (nplayer - 1) + (120 if not first_capture else 0) + random.randint(-60, 60)
     if mated and nplayer == 1:
@@ -137,7 +135,7 @@ def build(start, blunder, p):
     if pieces <= 4:
         themes.append('endgame')
     themes.append('oneMove' if nplayer == 1 else 'short' if nplayer == 2 else 'long')
-    return {'fen': start.fen(), 'moves': ' '.join(m.uci() for m in [blunder] + sol), 'rating': rating, 'themes': themes}
+    return {'fen': start.fen(), 'moves': ' '.join(m.uci() for m in [blunder] + sol), 'rating': rating, 'themes': themes, 'd': d, 'cap': bool(first_capture)}
 
 end = time.time() + minutes * 60
 n = 0

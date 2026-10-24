@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Board from '../components/Board';
 import { Icon } from '../components/icons';
 import { newPos, play, parseSq, type MoveRec } from '../lib/chess';
-import { useSettings } from '../lib/store';
+import { useSettings, settings } from '../lib/store';
 import { playSound, soundFor } from '../lib/sound';
 import { useAuth } from '../lib/auth';
 import { go } from '../lib/router';
@@ -41,7 +41,8 @@ export default function Puzzles() {
   const next = useCallback(() => {
     if (!list) return;
     const st = puzzleStats.get();
-    setPz(pick(list, st.rating, new Set(st.seen)));
+    const off = { easier: -300, normal: -100, harder: 200 }[settings.get().puzzleLevel] ?? -300;
+    setPz(pick(list, st.rating + off, new Set(st.seen)));
   }, [list]);
   useEffect(() => { if (list && !pz) next(); }, [list]); // eslint-disable-line react-hooks/exhaustive-deps
   if (err) return <div className="page narrow"><h1>Puzzles</h1><p className="error">{err}</p></div>;
@@ -150,6 +151,11 @@ function PuzzleBoard({ pz, rating, onNext, total }: { pz: Puzzle; rating: number
           badge={state === 'wrong' && wrongMove ? { sq: wrongMove.to, cls: 'blunder' } : done && last && state === 'solved' ? { sq: last.to, cls: 'best' } : null} highlight={hintSq && !done ? parseSq(hintSq) : null} />
       </div>
       <aside className="side-panel">
+        <div className="seg small" role="group" aria-label="Puzzle difficulty">
+          {(['easier', 'normal', 'harder'] as const).map((l) => (
+            <button key={l} aria-pressed={s.puzzleLevel === l} onClick={() => settings.set({ puzzleLevel: l })}>{l === 'easier' ? 'Easier' : l === 'normal' ? 'Normal' : 'Harder'}</button>
+          ))}
+        </div>
         <div className="puzzle-rating">
           <span>Puzzle rating</span>
           <b>{Math.round(rating)}</b>
