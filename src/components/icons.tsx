@@ -1,0 +1,32 @@
+// Значки: оценки ходов (символы в цветном кружке) и иконки интерфейса (линейные, 24×24).
+export const MOVE_CLASS_ICONS: Record<string, string> = {
+  brilliant: '!!', best: '★', excellent: '!', good: '✓', book: '≡', inaccuracy: '?!', miss: '×', mistake: '?', blunder: '??',
+};
+export const MOVE_CLASS_LABELS: Record<string, string> = {
+  brilliant: 'Brilliant', best: 'Best', excellent: 'Excellent', good: 'Good', book: 'Book', inaccuracy: 'Inaccuracy',
+  miss: 'Miss', mistake: 'Mistake', blunder: 'Blunder',
+};
+
+const P = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+export const Icon = {
+  play: () => <svg viewBox="0 0 24 24" {...P}><path d="M9 4.5a2.5 2.5 0 1 1 5 0c0 1-.5 1.7-1.2 2.2L14.5 12h-5l1.7-5.3A2.6 2.6 0 0 1 9 4.5Z" /><path d="M7 20h10l-1-4H8l-1 4Z" /><path d="M8.5 12h7l.5 4H8l.5-4Z" /></svg>,
+  bot: () => <svg viewBox="0 0 24 24" {...P}><rect x="4.5" y="7" width="15" height="11" rx="3" /><path d="M12 7V4" /><circle cx="12" cy="3.3" r=".8" /><circle cx="9.3" cy="12" r="1.2" /><circle cx="14.7" cy="12" r="1.2" /><path d="M9.5 15.3h5" /></svg>,
+  puzzle: () => <svg viewBox="0 0 24 24" {...P}><path d="M5 9h3a2 2 0 1 1 4 0h3v3a2 2 0 1 1 0 4v3H5v-3a2 2 0 1 0 0-4V9Z" /></svg>,
+  review: () => <svg viewBox="0 0 24 24" {...P}><circle cx="10.5" cy="10.5" r="5.5" /><path d="m15 15 4.5 4.5" /><path d="M8 11.5 10 9l1.6 1.6L13 9" /></svg>,
+  analysis: () => <svg viewBox="0 0 24 24" {...P}><path d="M4 19V5" /><path d="M4 19h16" /><path d="m7 15 4-5 3 3 5-6" /></svg>,
+  user: () => <svg viewBox="0 0 24 24" {...P}><circle cx="12" cy="8.5" r="3.5" /><path d="M5 19.5c1.2-3.2 3.8-5 7-5s5.8 1.8 7 5" /></svg>,
+  online: () => <svg viewBox="0 0 24 24" {...P}><circle cx="12" cy="12" r="8" /><path d="M4 12h16" /><path d="M12 4c2.4 2.3 3.5 5 3.5 8s-1.1 5.7-3.5 8c-2.4-2.3-3.5-5-3.5-8s1.1-5.7 3.5-8Z" /></svg>,
+  flip: () => <svg viewBox="0 0 24 24" {...P}><path d="M7 4v14" /><path d="m4 15 3 3 3-3" /><path d="M17 20V6" /><path d="m14 9 3-3 3 3" /></svg>,
+  first: () => <svg viewBox="0 0 24 24" {...P}><path d="M6 6v12" /><path d="m17 6-6 6 6 6" /></svg>,
+  prev: () => <svg viewBox="0 0 24 24" {...P}><path d="m14 6-6 6 6 6" /></svg>,
+  next: () => <svg viewBox="0 0 24 24" {...P}><path d="m10 6 6 6-6 6" /></svg>,
+  last: () => <svg viewBox="0 0 24 24" {...P}><path d="M18 6v12" /><path d="m7 6 6 6-6 6" /></svg>,
+  flag: () => <svg viewBox="0 0 24 24" {...P}><path d="M6 21V4" /><path d="M6 4h11l-2.5 4L17 12H6" /></svg>,
+  handshake: () => <svg viewBox="0 0 24 24" {...P}><path d="M3 11l4-4 3 1 2-2 3 1 3 3-6 6-2-2" /><path d="m3 11 5 5 2-2" /><path d="M21 10l-3 3" /></svg>,
+  undo: () => <svg viewBox="0 0 24 24" {...P}><path d="M9 7 5 11l4 4" /><path d="M5 11h9a5 5 0 0 1 0 10h-3" /></svg>,
+  bulb: () => <svg viewBox="0 0 24 24" {...P}><path d="M9 18h6" /><path d="M10 21h4" /><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z" /></svg>,
+  gear: () => <svg viewBox="0 0 24 24" {...P}><circle cx="12" cy="12" r="3" /><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" /></svg>,
+  copy: () => <svg viewBox="0 0 24 24" {...P}><rect x="8" y="8" width="11" height="12" rx="2" /><path d="M5 15V5a1 1 0 0 1 1-1h9" /></svg>,
+  plus: () => <svg viewBox="0 0 24 24" {...P}><path d="M12 5v14M5 12h14" /></svg>,
+  clock: () => <svg viewBox="0 0 24 24" {...P}><circle cx="12" cy="13" r="7.5" /><path d="M12 9v4l2.5 2" /><path d="M10 3h4" /></svg>,
+};

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blizzard Chess</title>
+  <meta name="description" content="Free chess: play people online and Blizzard bots of every strength, review your games with an engine, solve puzzles.">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <!-- движок Blizzard (правила и нотация в основном потоке; поиск — в engine/worker.js) -->
+  <script src="engine/engine.js"></script>
+  <script src="engine/book.js" defer></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
