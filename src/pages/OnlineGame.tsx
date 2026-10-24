@@ -93,6 +93,8 @@ function Live({ g }: { g: OGame }) {
   const shown = view < 0 || view > N ? N : view;
   const fen = shown === 0 ? START_FEN : moves[shown - 1].fenAfter;
   const sideToMove = (N & 1) as 0 | 1;
+  const liveFen = N === 0 ? START_FEN : moves[N - 1].fenAfter;
+  const [premove, setPremove] = useState<string | null>(null);
 
   // звук чужого хода
   const lastN = useRef(N);
@@ -137,12 +139,18 @@ function Live({ g }: { g: OGame }) {
 
   const onMove = (uci: string) => {
     if (myColor === null || !live || sideToMove !== myColor || pending) return;
-    const p = newPos(fen), rec = play(p, uci);
+    const p = newPos(liveFen), rec = play(p, uci);
     if (!rec) return;
     setPending(rec.uci); setView(-1);
     playSound(soundFor(rec));
     sendMove(g.id, rec.uci, myColor).then((r) => { if (!r.committed) setPending(null); }, () => setPending(null));
   };
+  // предход: как только соперник сходил, сыграть его (если ход легален)
+  useEffect(() => {
+    if (!premove) return;
+    if (!live) { setPremove(null); return; }
+    if (myColor !== null && sideToMove === myColor && !pending) { const u = premove; setPremove(null); onMove(u); }
+  }, [N, live]); // eslint-disable-line react-hooks/exhaustive-deps
   const onView = useCallback((i: number) => setView(i >= N ? -1 : Math.max(0, i)), [N]);
   useArrowKeys(shown, N, onView);
 
@@ -163,10 +171,11 @@ function Live({ g }: { g: OGame }) {
   useEffect(() => { if (!g.drawOffer) setDrawSent(false); }, [g.drawOffer]);
 
   return (
-    <div className="game-layout">
+    <div className="game-layout fixed-panel">
       <div className="board-col">
         <PlayerBar color={top} name={nameOf(top)} sub={subOf(top)} avatar={<Icon.user />} clock={clockOf(top)} running={live && nMoves >= 2 && sideToMove === top} />
         <Board fen={fen} orientation={orient} movable={myColor !== null && live && shown === N && !pending ? myColor : null}
+          premovable={myColor !== null && live && shown === N && s.premove ? myColor : null} premove={premove} onPremove={setPremove}
           lastMove={shown > 0 ? moves[shown - 1] : null} animate onMove={onMove} theme={s.theme} coords={s.showCoords} autoQueen={s.autoQueen} />
         <PlayerBar color={bottom} name={nameOf(bottom)} sub={subOf(bottom)} avatar={<Icon.user />} clock={clockOf(bottom)} running={live && nMoves >= 2 && sideToMove === bottom} />
       </div>

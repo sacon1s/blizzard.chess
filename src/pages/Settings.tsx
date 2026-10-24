@@ -5,7 +5,7 @@ import { PIECE_SETS, pieceImgs } from '../lib/pieces';
 
 export default function SettingsPage() {
   const s = useSettings();
-  const toggle = (k: 'sound' | 'showCoords' | 'autoQueen', label: string, hint: string) => (
+  const toggle = (k: 'sound' | 'showCoords' | 'autoQueen' | 'premove', label: string, hint: string) => (
     <label className="toggle-row">
       <span><b>{label}</b><span className="muted">{hint}</span></span>
       <span className="switch"><input type="checkbox" checked={s[k]} onChange={(e) => settings.set({ [k]: e.target.checked })} /><span /></span>
@@ -40,6 +40,7 @@ export default function SettingsPage() {
         <div className="preview"><Board fen="r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3" orientation={0} theme={s.theme} coords={s.showCoords} movable={null} lastMove={null} /></div>
         {toggle('showCoords', 'Coordinates', 'Letters and numbers on the board edge')}
         {toggle('autoQueen', 'Always promote to a queen', 'Skip the piece choice when a pawn promotes')}
+        {toggle('premove', 'Premoves', 'Make your next move while the opponent is thinking. Right-click cancels it')}
         <h2 className="label">Sound</h2>
         {toggle('sound', 'Move sounds', 'A click for moves, captures, castling and checks')}
       </section>

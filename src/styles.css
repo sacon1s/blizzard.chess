@@ -165,6 +165,7 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .sq.last::before, .sq.sel::before { content: ''; position: absolute; inset: 0; }
 .sq.last::before { background: rgba(255, 221, 51, .42); }
 .sq.sel::before { background: rgba(255, 221, 51, .6); }
+.sq.pre::after { content: ''; position: absolute; inset: 0; background: rgba(214, 64, 56, .5); z-index: 1; pointer-events: none; }
 .sq.check { background-image: radial-gradient(circle, rgba(255, 40, 30, .95) 0, rgba(230, 30, 20, .6) 30%, rgba(200, 0, 0, 0) 70%); }
 .sq.target::after { content: ''; position: absolute; inset: 36%; border-radius: 50%; background: rgba(0, 0, 0, .18); z-index: 3; pointer-events: none; }
 .sq.cap::after { content: ''; position: absolute; inset: 3%; border-radius: 50%; border: 6px solid rgba(0, 0, 0, .18); z-index: 3; pointer-events: none; }
@@ -448,6 +449,17 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .small-switch > span::after { width: 13px; height: 13px; }
 .small-switch input:checked + span::after { transform: translateX(13px); }
 .small-btn { padding: 6px 10px; font-size: 13px; margin-top: 8px; }
+
+/* панель партии постоянной высоты: комментарии и оценки не сдвигают кнопки */
+@media (min-width: 861px) {
+  .fixed-panel .side-panel { height: calc(var(--bs) + 2 * var(--pbar)); max-height: none; }
+  .fixed-panel .side-panel > * { flex-shrink: 0; }
+  .fixed-panel .side-panel > .moves, .fixed-panel .side-panel > .summary { flex: 1 1 0; min-height: 0; }
+  .fixed-panel .coach { height: 128px; overflow-y: auto; }
+  .fixed-panel .toast-inline { position: absolute; left: 0; right: 0; bottom: -28px; }
+}
+.progress.done i { display: none; }
+.progress.done::after { display: none; }
 
 /* ===================================================================== задачи */
 .puzzle-bar { gap: 12px; font-size: 16px; }

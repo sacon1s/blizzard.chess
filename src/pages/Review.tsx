@@ -163,7 +163,7 @@ function ReviewGame({ game }: { game: SavedGame }) {
   }
 
   return (
-    <div className="game-layout review">
+    <div className="game-layout review fixed-panel">
       <div className="board-col with-eval">
         <EvalBar white={wp === null ? 50 : wp} label={fmtEval(e)} flipped={orient === 1} />
         <div className="board-stack">
@@ -178,12 +178,10 @@ function ReviewGame({ game }: { game: SavedGame }) {
           <button role="tab" aria-selected={tab === 'review'} onClick={() => setTab('review')}>Review</button>
           <button role="tab" aria-selected={tab === 'moves'} onClick={() => setTab('moves')}>Moves</button>
         </div>
-        {!complete && (
-          <div className="progress" aria-label="Analysis progress">
-            <span>Analysing move {Math.max(0, done - 1)} of {N}</span>
-            <i style={{ width: (100 * done / (N + 1)).toFixed(1) + '%' }} />
-          </div>
-        )}
+        <div className={'progress' + (complete ? ' done' : '')} aria-label="Analysis progress">
+          <span>{complete ? 'Analysed by Blizzard 0.9' : `Analysing move ${Math.max(0, done - 1)} of ${N}`}</span>
+          <i style={{ width: (100 * done / (N + 1)).toFixed(1) + '%' }} />
+        </div>
         <Coach k={view - 1} moves={moves} entries={entries} c={c} result={game.result} reason={game.reason} total={N} />
         {tab === 'review' ? (
           <>

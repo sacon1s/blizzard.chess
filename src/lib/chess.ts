@@ -51,6 +51,30 @@ export function targetsFrom(pos: Pos, from: number): Map<number, { promo: boolea
   return out;
 }
 
+// предход: куда фигура могла бы пойти, если соперник освободит путь (без учёта блокировок и шахов)
+export function premoveTargets(pos: Pos, from: number): Map<number, { promo: boolean; capture: boolean }> {
+  const out = new Map<number, { promo: boolean; capture: boolean }>();
+  const pc = from >= 0 ? pos.board[from] : 0;
+  if (!pc) return out;
+  const color = pc >> 3, t = pc & 7, rank = from >> 4;
+  const add = (sq: number) => { if (!(sq & 0x88) && sq !== from) out.set(sq, { promo: t === 1 && (sq >> 4) === (color ? 0 : 7), capture: false }); };
+  const slide = (dirs: number[]) => { for (const d of dirs) for (let sq = from + d; !(sq & 0x88); sq += d) add(sq); };
+  if (t === 1) {
+    const d = color ? -16 : 16;
+    add(from + d); add(from + d - 1); add(from + d + 1);
+    if (rank === (color ? 6 : 1)) add(from + 2 * d);
+  } else if (t === 2) [33, 31, 18, 14, -33, -31, -18, -14].forEach((d) => add(from + d));
+  else if (t === 3) slide([17, 15, -17, -15]);
+  else if (t === 4) slide([1, -1, 16, -16]);
+  else if (t === 5) slide([17, 15, -17, -15, 1, -1, 16, -16]);
+  else if (t === 6) {
+    [1, -1, 16, -16, 17, 15, -17, -15].forEach((d) => add(from + d));
+    if (color === 0 && from === 4) { if (pos.castle & 1) add(6); if (pos.castle & 2) add(2); }
+    if (color === 1 && from === 116) { if (pos.castle & 4) add(118); if (pos.castle & 8) add(114); }
+  }
+  return out;
+}
+
 // сделать ход (uci) в позиции pos; возвращает запись хода или null, если ход нелегален
 export function play(pos: Pos, uci: string): MoveRec | null {
   const m = pos.uciToMove(uci);
