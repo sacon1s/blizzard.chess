@@ -507,7 +507,7 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
   .hero { grid-template-columns: 1fr; min-height: 0; padding-top: 40px; }
   .demo { --bs: min(100vw - 40px, 480px); }
   .bots-grid, .review-home, .online-grid { grid-template-columns: 1fr; }
-  .bot-card { position: static; }
+  .bot-card { position: static; order: -1; }
   .features { grid-template-columns: 1fr; }
   .feature { border-right: 0; border-bottom: 1px solid var(--line); }
   .feature:last-child { border-bottom: 0; }

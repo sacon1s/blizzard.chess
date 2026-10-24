@@ -29,7 +29,7 @@ export default function Bots() {
         <ul className="bot-list" role="listbox" aria-label="Bots">
           {BOTS.map((b) => (
             <li key={b.level} role="option" aria-selected={b.level === s.botLevel}>
-              <button className={'bot-row' + (b.level === s.botLevel ? ' on' : '')} onClick={() => settings.set({ botLevel: b.level })}>
+              <button className={'bot-row' + (b.level === s.botLevel ? ' on' : '')} onClick={() => { settings.set({ botLevel: b.level }); if (window.innerWidth <= 860) window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                 <BotAvatar level={b.level} />
                 <span className="bot-name"><b>{b.name}</b><span>{b.elo}</span></span>
               </button>
