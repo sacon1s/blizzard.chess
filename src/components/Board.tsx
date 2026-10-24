@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { pieceImgs } from '../lib/pieces';
 import { useSettings } from '../lib/store';
 import { newPos, targetsFrom, pieceKey, sqName, parseSq } from '../lib/chess';
-import { MOVE_CLASS_ICONS } from './icons';
+import ClsIcon, { CLS_LABEL } from './ClsIcon';
 
 export interface Arrow { from: string; to: string; color: string; opacity?: number }
 export interface BoardProps {
@@ -189,7 +189,7 @@ export default function Board(p: BoardProps) {
         {p.coords !== false && col === 0 && <span className="coord r">{(sq >> 4) + 1}</span>}
         {p.coords !== false && row === 7 && <span className="coord f">{'abcdefgh'[sq & 7]}</span>}
         {piece ? <div className={'pc' + (drag && drag.from === sq ? ' dragging' : '')} style={{ backgroundImage: `url("${PIECE_IMG[pieceKey(piece)]}")` }} /> : null}
-        {p.badge && p.badge.sq === sq && <span className={'badge cls-' + p.badge.cls} title={p.badge.cls}>{MOVE_CLASS_ICONS[p.badge.cls]}</span>}
+        {p.badge && p.badge.sq === sq && <span className="badge" title={CLS_LABEL[p.badge.cls]}><ClsIcon cls={p.badge.cls} size="100%" ring /></span>}
       </div>,
     );
   }

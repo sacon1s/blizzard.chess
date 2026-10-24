@@ -1,12 +1,4 @@
-// Значки: оценки ходов (символы в цветном кружке) и иконки интерфейса (линейные, 24×24).
-export const MOVE_CLASS_ICONS: Record<string, string> = {
-  brilliant: '!!', best: '★', excellent: '!', good: '✓', book: '≡', inaccuracy: '?!', miss: '×', mistake: '?', blunder: '??',
-};
-export const MOVE_CLASS_LABELS: Record<string, string> = {
-  brilliant: 'Brilliant', best: 'Best', excellent: 'Excellent', good: 'Good', book: 'Book', inaccuracy: 'Inaccuracy',
-  miss: 'Miss', mistake: 'Mistake', blunder: 'Blunder',
-};
-
+// Иконки интерфейса (линейные, 24×24). Значки оценок ходов — в ClsIcon.tsx.
 const P = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 export const Icon = {
   play: () => <svg viewBox="0 0 24 24" {...P}><path d="M9 4.5a2.5 2.5 0 1 1 5 0c0 1-.5 1.7-1.2 2.2L14.5 12h-5l1.7-5.3A2.6 2.6 0 0 1 9 4.5Z" /><path d="M7 20h10l-1-4H8l-1 4Z" /><path d="M8.5 12h7l.5 4H8l.5-4Z" /></svg>,

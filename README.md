@@ -14,4 +14,4 @@ npm run dev      # local server
 npm run build    # builds the site into docs/ (GitHub Pages serves main /docs)
 ```
 
-Fonts: Archivo and Golos Text (SIL Open Font License, see `LICENSES/`). Pieces: Maestro and other sets from the lichess.org collection, each under its author's license (see `LICENSES/pieces.md`). Move sounds: Kenney (CC0).
+Fonts: Archivo and Golos Text (SIL Open Font License, see `LICENSES/`). Pieces: Maestro and other sets from the lichess.org collection, each under its author's license (see `LICENSES/pieces.md`). Move sounds: recorded on a real magnetic chess board by sacon1s.

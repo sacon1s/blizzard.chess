@@ -20,7 +20,7 @@ export default function OnlineGame({ id }: { id?: string }) {
       <div className="page narrow">
         <h1>Game not found</h1>
         <p className="muted">The link may be wrong, or the game was removed.</p>
-        <button className="btn primary" onClick={() => go('/online')}>Find a game</button>
+        <button className="btn primary" onClick={() => go('/')}>Find a game</button>
       </div>
     );
   }
@@ -39,7 +39,7 @@ function Invite({ g }: { g: OGame }) {
     return (
       <div className="page narrow">
         <h1>Challenge cancelled</h1>
-        <button className="btn primary" onClick={() => go('/online')}>Find a game</button>
+        <button className="btn primary" onClick={() => go('/')}>Find a game</button>
       </div>
     );
   }
@@ -54,7 +54,7 @@ function Invite({ g }: { g: OGame }) {
             <button className="btn primary" onClick={() => navigator.clipboard.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600); }, () => {})}><Icon.copy />{copied ? 'Copied' : 'Copy'}</button>
           </div>
           <span className="waiting" aria-hidden="true"><i /><i /><i /></span>
-          <button className="btn ghost" onClick={() => abort(g.id).then(() => go('/online'))}>Cancel challenge</button>
+          <button className="btn ghost" onClick={() => abort(g.id).then(() => go('/'))}>Cancel challenge</button>
         </>
       ) : !user ? (
         <button className="btn primary big" onClick={() => go('/login')}>Sign in to play</button>
@@ -179,7 +179,7 @@ function Live({ g }: { g: OGame }) {
           <div className="result-card draw">
             <h2>Game aborted</h2>
             <p>No rating change.</p>
-            <div className="row"><button className="btn primary" onClick={() => go('/online')}>New game</button></div>
+            <div className="row"><button className="btn primary" onClick={() => go('/')}>New game</button></div>
           </div>
         )}
         {g.status === 'over' && (

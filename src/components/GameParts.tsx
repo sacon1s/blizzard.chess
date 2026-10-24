@@ -1,6 +1,7 @@
 // Общие части экрана партии: плашка игрока с часами, список ходов, кнопки перехода по ходам, шкала оценки.
 import { useEffect, useRef } from 'react';
-import { Icon, MOVE_CLASS_ICONS } from './icons';
+import { Icon } from './icons';
+import ClsIcon from './ClsIcon';
 import type { MoveRec } from '../lib/chess';
 
 export function fmtClock(ms: number): string {
@@ -47,7 +48,7 @@ export function MoveList(p: { moves: MoveRec[]; view: number; onView: (i: number
     const c = p.classes ? p.classes[i] : null;
     return (
       <button className={'mv' + (p.view === i + 1 ? ' cur' : '') + (c ? ' cls-' + c : '')} onClick={() => p.onView(i + 1)}>
-        {c && ['brilliant', 'best', 'inaccuracy', 'miss', 'mistake', 'blunder', 'book'].includes(c) && <i className={'mini cls-' + c}>{MOVE_CLASS_ICONS[c]}</i>}
+        {c && ['brilliant', 'best', 'inaccuracy', 'miss', 'mistake', 'blunder', 'book'].includes(c) && <ClsIcon cls={c} size={17} className="mini" />}
         {p.moves[i].san}
       </button>
     );

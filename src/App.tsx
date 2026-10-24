@@ -5,7 +5,6 @@ import { useAuth } from './lib/auth';
 import { settlePending } from './lib/online';
 import { useSettings } from './lib/store';
 import { Icon } from './components/icons';
-import Home from './pages/Home';
 import Bots from './pages/Bots';
 import BotGame from './pages/BotGame';
 import Review from './pages/Review';
@@ -18,7 +17,7 @@ import Profile from './pages/Profile';
 import SettingsPage from './pages/Settings';
 
 const NAV: { path: string; label: string; icon: () => ReactNode; match: string[] }[] = [
-  { path: '/online', label: 'Play', icon: Icon.online, match: ['online', 'game'] },
+  { path: '/', label: 'Play', icon: Icon.online, match: ['', 'online', 'game'] },
   { path: '/bots', label: 'Bots', icon: Icon.bot, match: ['bots', 'play'] },
   { path: '/puzzles', label: 'Puzzles', icon: Icon.puzzle, match: ['puzzles'] },
   { path: '/review', label: 'Review', icon: Icon.review, match: ['review'] },
@@ -61,12 +60,12 @@ export default function App() {
   const uid = user ? user.uid : '';
   useEffect(() => { if (uid) settlePending(uid); }, [uid]);
   useEffect(() => {
-    const titles: Record<string, string> = { online: 'Play online', game: 'Online game', bots: 'Play a bot', play: 'Bot game', puzzles: 'Puzzles', review: 'Game review', analysis: 'Analysis', login: 'Sign in', profile: 'Profile', settings: 'Settings' };
+    const titles: Record<string, string> = { '': 'Play online', online: 'Play online', game: 'Online game', bots: 'Play a bot', play: 'Bot game', puzzles: 'Puzzles', review: 'Game review', analysis: 'Analysis', login: 'Sign in', profile: 'Profile', settings: 'Settings' };
     document.title = titles[section] ? `${titles[section]} | Blizzard Chess` : 'Blizzard Chess';
   }, [section]);
   let page: ReactNode;
   switch (section) {
-    case '': page = <Home />; break;
+    case '': page = <Online />; break;
     case 'bots': page = <Bots />; break;
     case 'play': page = <BotGame query={query} />; break;
     case 'review': page = <Review id={parts[1]} />; break;
@@ -80,7 +79,7 @@ export default function App() {
     default: page = <NotFound />;
   }
   return (
-    <div className={'app' + (section === '' ? ' at-home' : '')}>
+    <div className="app">
       <Rail section={section} />
       <main className="main">{page}</main>
     </div>
@@ -92,7 +91,7 @@ function NotFound() {
     <div className="page narrow">
       <h1>Page not found</h1>
       <p className="muted">This address doesn’t lead anywhere.</p>
-      <button className="btn primary" onClick={() => go('/')}>Go to the home page</button>
+      <button className="btn primary" onClick={() => go('/')}>Go to Play</button>
     </div>
   );
 }

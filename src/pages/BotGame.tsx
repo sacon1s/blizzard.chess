@@ -12,7 +12,7 @@ import { useSettings, saveGame, newId } from '../lib/store';
 import { go } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import { entryFromInfo, terminalEntry, classifyOne, richMove, coachComment, type Entry, type Cls } from '../lib/review';
-import { MOVE_CLASS_ICONS } from '../components/icons';
+import ClsIcon from '../components/ClsIcon';
 import { settings } from '../lib/store';
 
 const VALUE = [0, 1, 3, 3, 5, 9, 0];
@@ -20,6 +20,23 @@ const VERDICT: Record<string, string> = {
   brilliant: 'is brilliant', best: 'is best', excellent: 'is excellent', good: 'is good', book: 'is a book move',
   inaccuracy: 'is an inaccuracy', miss: 'is a miss', mistake: 'is a mistake', blunder: 'is a blunder',
 };
+// сколько бот «думает», чтобы ходить по-человечески: быстро — единственный ход и дебют по книге,
+// дольше — обычные ходы; с часами — не больше разумной доли оставшегося времени
+function thinkTime(pos: any, uci: string | null, book: boolean, ply: number, clockLeft: number | null, inc: number): number {
+  const legal = pos.legalMoves().length;
+  let t: number;
+  if (legal <= 1) t = 300 + Math.random() * 300;
+  else if (book || ply < 4) t = 600 + Math.random() * 1000;
+  else {
+    t = 1000 + Math.random() * 2400;
+    const m = uci ? pos.uciToMove(uci) : 0;
+    if (m && ((m >> 20) & 1)) t *= 0.65; // взятие обычно очевиднее
+    if (pos.inCheck()) t *= 0.8;
+  }
+  if (clockLeft !== null) t = Math.min(t, Math.max(120, clockLeft / 35 + inc * 0.6));
+  return t;
+}
+
 export function materialDiff(fen: string): number {
   const p = newPos(fen);
   let d = 0;
@@ -151,7 +168,8 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
       if (cancelled || resultRef.current) return;
       const choice = (info.book ? info.lines[0] && info.lines[0].move : E.pickMove(info, level, ply)) || (info.lines[0] && info.lines[0].move);
       if (info.lines[0]) lastBotEval.current = info.lines[0].mate !== null ? (info.lines[0].mate > 0 ? 3000 : -3000) : info.lines[0].cp || 0;
-      const wait = Math.max(0, (level <= 4 ? 500 : 250) - (performance.now() - t0));
+      const left = tcCfg ? clocks.current.t[botColor] - (performance.now() - clocks.current.since) : null;
+      const wait = Math.max(0, thinkTime(pos.current, choice, !!info.book, ply, left, tcCfg ? tcCfg.inc : 0) - (performance.now() - t0));
       setTimeout(() => {
         if (cancelled || resultRef.current) return;
         setThinking(false);
@@ -261,7 +279,7 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
         {!result && s.coach && (
           note ? (
             <div className={'coach cls-' + note.c.cls}>
-              <i className={'cls-icon cls-' + note.c.cls} aria-hidden="true">{MOVE_CLASS_ICONS[note.c.cls]}</i>
+              <ClsIcon cls={note.c.cls} size={34} className="cls-icon" />
               <div>
                 <b>{note.label} <em>{VERDICT[note.c.cls]}</em></b>
                 <p>{note.text.join(' ')}{note.better && <> Better was <strong>{note.better}</strong>.</>}</p>

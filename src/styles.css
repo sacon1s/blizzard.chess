@@ -9,8 +9,8 @@
 :root {
   --ui: 'Golos Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --mono: ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
-  --c-brilliant: #26c2a3; --c-best: #81b64c; --c-excellent: #96bc4b; --c-good: #95af8a; --c-book: #a88865;
-  --c-inaccuracy: #f7c631; --c-miss: #ee6b55; --c-mistake: #ffa459; --c-blunder: #fa412d;
+  --c-brilliant: #2bc0d0; --c-best: #4fae5a; --c-excellent: #86b83a; --c-good: #86a883; --c-book: #8f84dc;
+  --c-inaccuracy: #e8b52c; --c-miss: #e0558c; --c-mistake: #ec8130; --c-blunder: #e0463f;
   --panel-w: 360px;
   --pbar: 52px;
   --topbar: 0px;
@@ -180,10 +180,8 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .pc.dragging { opacity: .3; }
 .arrows { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 4; }
 .drag-ghost { position: fixed; transform: translate(-50%, -50%); background-size: 100% 100%; pointer-events: none; z-index: 1000; cursor: grabbing; }
-.badge {
-  position: absolute; top: -6%; right: -6%; width: 42%; height: 42%; border-radius: 50%; z-index: 6; display: grid; place-items: center;
-  color: #fff; font: 800 clamp(9px, calc(var(--bs) / 40), 15px)/1 var(--ui); box-shadow: 0 1px 4px rgba(0, 0, 0, .45); border: 2px solid #fff;
-}
+.badge { position: absolute; top: -9%; right: -9%; width: 46%; height: 46%; z-index: 6; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); pointer-events: none; }
+.badge svg { display: block; }
 .promo { position: absolute; width: 12.5%; height: 50%; display: flex; flex-direction: column; z-index: 20; background: #fff; box-shadow: 0 6px 24px rgba(0, 0, 0, .6); border-radius: 4px; overflow: hidden; }
 .promo button { flex: 1; border: 0; background-color: #fff; background-size: 88%; background-position: center; background-repeat: no-repeat; }
 .promo button:hover { background-color: #d4d4d4; }
@@ -197,7 +195,6 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .cls-miss { --cc: var(--c-miss); }
 .cls-mistake { --cc: var(--c-mistake); }
 .cls-blunder { --cc: var(--c-blunder); }
-.badge, .cls-icon, .mini { background: var(--cc, #555); }
 
 /* ===================================================================== экран партии */
 .game-layout { display: flex; gap: 28px; padding: 20px clamp(16px, 2.4vw, 36px); align-items: flex-start; justify-content: center; }
@@ -242,7 +239,7 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .mv:hover { background: var(--raised-2); }
 .mv.cur { background: var(--sel); color: var(--sel-ink); }
 .mv.empty { color: var(--faint); cursor: default; }
-.mini { width: 17px; height: 17px; border-radius: 50%; display: inline-grid; place-items: center; color: #fff; font: 800 9px/1 var(--ui); font-style: normal; flex: none; }
+.mini { flex: none; }
 
 .navbtns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .navbtns button { height: 40px; border-radius: var(--r); border: 1px solid var(--line-2); background: var(--raised); display: grid; place-items: center; color: var(--text); }
@@ -342,8 +339,8 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .coach .opening { color: var(--faint); font-size: 12.5px; margin-top: 6px; }
 .coach-av { width: 34px; height: 34px; border-radius: 50%; background: #fff; display: grid; place-items: center; flex: none; }
 .coach-av img { width: 24px; height: 24px; filter: invert(1); }
-.cls-icon { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font: 800 14px/1 var(--ui); font-style: normal; flex: none; }
-.counts .cls-icon { width: 20px; height: 20px; font-size: 9px; display: inline-grid; margin-right: 8px; vertical-align: -5px; }
+.cls-svg { flex: none; display: inline-block; }
+.counts .cls-icon { width: 20px; height: 20px; margin-right: 8px; vertical-align: -5px; }
 .graph { width: 100%; height: 72px; border-radius: var(--r); cursor: pointer; display: block; flex: none; }
 .graph .bg { fill: #403d39; }
 .graph .area { fill: #f4f4f2; }
@@ -406,6 +403,7 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .notice.big { flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; margin-bottom: 28px; font-size: 15px; }
 .online-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 36px; align-items: start; }
 .section-gap { margin-top: 36px; }
+.online-count { color: var(--faint); }
 .tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
 .tc { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 16px 16px 14px; min-height: 92px; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--panel); text-align: left; color: var(--text); }
 .tc b { font: var(--disp-weight) 24px/1.1 var(--disp); font-stretch: var(--disp-stretch); letter-spacing: -.02em; }

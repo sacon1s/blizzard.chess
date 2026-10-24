@@ -27,7 +27,7 @@ export default function Profile({ name }: { name?: string }) {
       <div className="page narrow">
         <h1>Player not found</h1>
         <p className="muted">No player is called “{name}”.</p>
-        <button className="btn primary" onClick={() => go('/online')}>Play online</button>
+        <button className="btn primary" onClick={() => go('/')}>Play online</button>
       </div>
     );
   }

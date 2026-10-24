@@ -1,7 +1,7 @@
 // Игра онлайн: быстрый поиск соперника по контролю времени, вызов друга по ссылке, свои партии, лучшие игроки.
 import { useEffect, useState } from 'react';
 import { Icon } from '../components/icons';
-import { useAuth, speedOf, type Speed } from '../lib/auth';
+import { useAuth, useOnlineCount, speedOf, type Speed } from '../lib/auth';
 import { seek, watchSeeks, createFriendGame, userGames, leaderboard, parseTcStr, tcName, QUICK, SPEED_LABEL, ratingOf, type UserGame } from '../lib/online';
 import { go, useRoute } from '../lib/router';
 
@@ -9,6 +9,7 @@ const speedOfTc = (tc: string) => { const t = parseTcStr(tc); return speedOf(t.b
 
 export default function Online() {
   const { user, profile, loading } = useAuth();
+  const online = useOnlineCount();
   const { query } = useRoute();
   const [seeking, setSeeking] = useState<string | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -31,7 +32,7 @@ export default function Online() {
     const c = seek(tc, profile, (gid) => { setCancel(null); setSeeking(null); go('/game/' + gid); });
     setCancel(() => c);
   }
-  function stop() { if (cancel) cancel(); setCancel(null); setSeeking(null); if (auto) go('/online'); }
+  function stop() { if (cancel) cancel(); setCancel(null); setSeeking(null); if (auto) go('/'); }
   async function friend() {
     if (!profile) { go('/login'); return; }
     try { const gid = await createFriendGame(friendTc, profile, friendColor); go('/game/' + gid); } catch { setErr('Couldn’t create the game. Check your connection.'); }
@@ -42,7 +43,7 @@ export default function Online() {
     <div className="page online">
       <header className="page-head">
         <h1>Play online</h1>
-        <p>{profile ? <>You play as <a href={'#/profile/' + profile.name}>{profile.name}</a>. Pick a time control and we’ll find an opponent.</> : 'Rated games against people. Ratings start at 1200.'}</p>
+        <p>{profile ? 'Pick a time control and we’ll find an opponent.' : 'Rated games against people. Ratings start at 1200.'}{online ? <span className="online-count"> {online} {online === 1 ? 'player' : 'players'} online.</span> : null}</p>
       </header>
       {needAccount && (
         <div className="notice big">

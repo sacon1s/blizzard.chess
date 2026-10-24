@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Board from '../components/Board';
 import { MoveList, NavButtons, useArrowKeys, EvalBar, PlayerBar } from '../components/GameParts';
-import { Icon, MOVE_CLASS_ICONS, MOVE_CLASS_LABELS } from '../components/icons';
+import { Icon } from '../components/icons';
+import ClsSvg, { CLS_LABEL as MOVE_CLASS_LABELS } from '../components/ClsIcon';
 import { newPos, moveNumber, toPgn, REASONS } from '../lib/chess';
 import { analyst } from '../lib/engine';
 import { buildMoves, entryFromInfo, terminalEntry, classifyAll, accuracy, counts, fmtEval, winPct, coachComment, parseInput, perfRating, type Entry, type Cls } from '../lib/review';
@@ -205,7 +206,7 @@ function ReviewGame({ game }: { game: SavedGame }) {
 }
 
 function ClsIcon({ cls }: { cls: string }) {
-  return <i className={'cls-icon cls-' + cls} aria-hidden="true">{MOVE_CLASS_ICONS[cls]}</i>;
+  return <ClsSvg cls={cls} size={34} className="cls-icon" />;
 }
 
 function Coach({ k, moves, entries, c, result, reason, total }: { k: number; moves: ReturnType<typeof buildMoves>['moves']; entries: (Entry | null)[]; c: Cls | null; result: string; reason: string; total: number }) {
