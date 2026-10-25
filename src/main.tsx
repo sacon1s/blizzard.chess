@@ -19,5 +19,10 @@ if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
     try { if (sessionStorage.getItem('sw-reload')) return; sessionStorage.setItem('sw-reload', '1'); } catch (e) { return; }
     location.reload();
   });
+  // нажали на уведомление, а сайт уже открыт: перейти к партии
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    const u = e.data && typeof e.data.open === 'string' ? e.data.open : '';
+    if (u.startsWith(location.origin)) { const h = u.indexOf('#'); if (h >= 0) location.hash = u.slice(h); else location.href = u; }
+  });
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }

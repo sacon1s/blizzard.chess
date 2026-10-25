@@ -874,3 +874,4 @@ select { background: var(--inset); color: var(--text); border: 1px solid var(--l
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+.notify-msg { margin: 4px 0 0; }

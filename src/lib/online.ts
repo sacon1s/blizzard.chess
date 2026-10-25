@@ -3,7 +3,8 @@
 //   games/<id> — партия;  userGames/<uid>/<id> — история игрока (пишет только он сам).
 // Время считается по часам сервера (.info/serverTimeOffset); ходы записываются транзакцией.
 import { ref, push, set, get, onValue, runTransaction, onDisconnect, remove, update, query, orderByChild, limitToLast, equalTo, serverTimestamp } from 'firebase/database';
-import { db } from './firebase';
+import { db, auth } from './firebase';
+import { notifyPlayer } from './push';
 import { speedOf, DEFAULT_RATING, type Profile, type Speed } from './auth';
 import { START_FEN, posAt, play, gameEnd, newPos } from './chess';
 
@@ -134,6 +135,16 @@ export function joinGame(gid: string, me: Profile) {
 }
 
 // ---------------------------------------------------------------- ходы и конец партии
+// партия по переписке: после своего хода (или конца партии) уведомить соперника, даже если сайт у него закрыт
+type TxResult = { committed: boolean; snapshot: { key: string | null; val: () => OGame | null } };
+function tell<T extends TxResult>(r: T, onlyEnd = false): T {
+  const me = auth.currentUser && auth.currentUser.uid, g = r.committed ? r.snapshot.val() : null;
+  if (!g || !g.daily || !me || !r.snapshot.key) return r;
+  const opp = g.white === me ? g.black : g.black === me ? g.white : undefined;
+  if (g.status === 'over') notifyPlayer('end', opp, r.snapshot.key);
+  else if (!onlyEnd && g.status === 'started') notifyPlayer('move', opp, r.snapshot.key);
+  return r;
+}
 export function sendMove(gid: string, uci: string, color: 0 | 1) {
   return runTransaction(ref(db, 'games/' + gid), (g: OGame | null) => {
     if (!g) return g;
@@ -157,7 +168,7 @@ export function sendMove(gid: string, uci: string, color: 0 | 1) {
     const end = gameEnd(pos);
     if (end) { g.status = 'over'; g.result = end.result; g.reason = end.reason; }
     return g;
-  });
+  }).then((r) => tell(r));
 }
 function finishOnTime(g: OGame, ms: string[], loser: 0 | 1) {
   g.clock[loser === 0 ? 'w' : 'b'] = 0;
@@ -179,7 +190,7 @@ export function claimTimeout(gid: string) {
     const left = g.clock[side === 0 ? 'w' : 'b'] - (serverNow() - g.clock.last);
     if (left > 0) return;
     return finishOnTime(g, ms, side);
-  });
+  }).then((r) => tell(r, true));
 }
 export function resign(gid: string, color: 0 | 1) {
   return runTransaction(ref(db, 'games/' + gid), (g: OGame | null) => {
@@ -187,7 +198,7 @@ export function resign(gid: string, color: 0 | 1) {
     if (g.status !== 'started') return;
     g.status = 'over'; g.result = color === 0 ? '0-1' : '1-0'; g.reason = 'resign';
     return g;
-  });
+  }).then((r) => tell(r, true));
 }
 export function abort(gid: string) {
   return runTransaction(ref(db, 'games/' + gid), (g: OGame | null) => {
@@ -204,7 +215,7 @@ export function answerDraw(gid: string, uid: string, accept: boolean) {
     if (accept) { g.status = 'over'; g.result = '1/2-1/2'; g.reason = 'agreement'; }
     g.drawOffer = null;
     return g;
-  });
+  }).then((r) => tell(r, true));
 }
 export const LEAVE_MS = 30000;
 // соперник ушёл больше 30 секунд назад: победа (или отмена, если партия толком не началась)
@@ -218,7 +229,7 @@ export function claimAbandon(gid: string, color: 0 | 1) {
     if (movesOf(g).length < 2) { g.status = 'aborted'; return g; }
     g.status = 'over'; g.result = color === 0 ? '1-0' : '0-1'; g.reason = 'abandon';
     return g;
-  });
+  }).then((r) => tell(r, true));
 }
 
 // присутствие в партии: пока страница открыта — «на месте»

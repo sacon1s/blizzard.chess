@@ -7,6 +7,7 @@ import { ref, get, set, update, remove, onValue, query, orderByKey, startAt, end
 import { db } from './firebase';
 import type { Profile } from './auth';
 import { award } from './achievements';
+import { notifyPlayer } from './push';
 
 export async function searchPlayers(prefix: string): Promise<{ uid: string; name: string }[]> {
   const p = prefix.trim().toLowerCase();
@@ -32,7 +33,7 @@ export function useFriendState(me: string | null, other: string | null): FriendS
   }, [me, other]);
   return st;
 }
-export const sendRequest = (me: Profile, to: string) => set(ref(db, `friendRequests/${to}/${me.uid}`), { name: me.name, t: serverTimestamp() });
+export const sendRequest = (me: Profile, to: string) => set(ref(db, `friendRequests/${to}/${me.uid}`), { name: me.name, t: serverTimestamp() }).then(() => notifyPlayer('friend', to));
 export const cancelRequest = (me: string, to: string) => remove(ref(db, `friendRequests/${to}/${me}`));
 export const declineRequest = (me: string, from: string) => remove(ref(db, `friendRequests/${me}/${from}`));
 export function acceptRequest(me: Profile, from: string, fromName: string) {
@@ -78,7 +79,7 @@ export function useOnlineSet(): Set<string> {
 }
 
 export interface Challenge { gid: string; from: string; name: string; tc: string; t: number }
-export const sendChallenge = (to: string, gid: string, me: Profile, tc: string) => set(ref(db, `challenges/${to}/${gid}`), { from: me.uid, name: me.name, tc, t: serverTimestamp() });
+export const sendChallenge = (to: string, gid: string, me: Profile, tc: string) => set(ref(db, `challenges/${to}/${gid}`), { from: me.uid, name: me.name, tc, t: serverTimestamp() }).then(() => notifyPlayer('challenge', to, gid));
 export const dropChallenge = (to: string, gid: string) => remove(ref(db, `challenges/${to}/${gid}`));
 export function useChallenges(uid: string | null): Challenge[] {
   const [list, setList] = useState<Challenge[]>([]);

@@ -2,6 +2,35 @@
 import Board from '../components/Board';
 import { settings, useSettings, THEMES, SKINS } from '../lib/store';
 import { PIECE_SETS, pieceImgs } from '../lib/pieces';
+import { useEffect, useState } from 'react';
+import { enableNotifications, disableNotifications, pushUrl, pushSupported } from '../lib/push';
+import { useAuth } from '../lib/auth';
+
+// уведомления: при открытой вкладке — всегда; при закрытом сайте — если настроен сервер уведомлений
+function NotifyToggle() {
+  const s = useSettings();
+  const { user } = useAuth();
+  const [remote, setRemote] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  useEffect(() => { pushUrl().then((u) => setRemote(!!u && pushSupported())); }, []);
+  const hint = remote
+    ? (user ? 'Your move in daily games, challenges and friend requests, even when the site is closed' : 'Challenges and friend requests. Sign in to get them even when the site is closed')
+    : 'Challenges and friend requests while the tab is in the background';
+  return (
+    <>
+      <label className="toggle-row">
+        <span><b>Notifications</b><span className="muted">{hint}</span></span>
+        <span className="switch"><input type="checkbox" checked={s.notify} disabled={busy} onChange={(e) => {
+          const on = e.target.checked;
+          setMsg(''); setBusy(true);
+          (on ? enableNotifications() : disableNotifications().then(() => null)).then((err) => setMsg(err || ''), () => setMsg('Something went wrong. Try again.')).finally(() => setBusy(false));
+        }} /><span /></span>
+      </label>
+      {msg && <p className="muted small notify-msg" role="status">{msg}</p>}
+    </>
+  );
+}
 
 export default function SettingsPage() {
   const s = useSettings();
@@ -42,15 +71,7 @@ export default function SettingsPage() {
         {toggle('autoQueen', 'Always promote to a queen', 'Skip the piece choice when a pawn promotes')}
         {toggle('premove', 'Premoves', 'Make your next move while the opponent is thinking. Right-click cancels it')}
         {toggle('chat', 'Chat in online games', 'Show messages from your opponent')}
-        <label className="toggle-row">
-          <span><b>Browser notifications</b><span className="muted">A notice when a friend challenges you while the tab is in the background</span></span>
-          <span className="switch"><input type="checkbox" checked={s.notify} onChange={(e) => {
-            const on = e.target.checked;
-            if (on && 'Notification' in window && Notification.permission !== 'granted') {
-              Notification.requestPermission().then((p) => settings.set({ notify: p === 'granted' }), () => {});
-            } else settings.set({ notify: on });
-          }} /><span /></span>
-        </label>
+        <NotifyToggle />
         <h2 className="label">Sound</h2>
         {toggle('sound', 'Move sounds', 'A click for moves, captures, castling and checks')}
       </section>

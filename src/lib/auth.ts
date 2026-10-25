@@ -44,7 +44,7 @@ export function useAuth(): AuthState {
 export const signInGoogle = () => signInWithPopup(auth, new GoogleAuthProvider());
 export const signInEmail = (email: string, pass: string) => signInWithEmailAndPassword(auth, email, pass);
 export const signUpEmail = (email: string, pass: string) => createUserWithEmailAndPassword(auth, email, pass);
-export const logOut = () => signOut(auth);
+export const logOut = async () => { try { const { forgetDevice } = await import('./push'); await forgetDevice(); } catch { /* */ } return signOut(auth); };
 
 export function nameError(name: string): string | null {
   if (!/^[A-Za-z0-9_-]{3,20}$/.test(name)) return 'Use 3–20 letters, digits, - or _.';
