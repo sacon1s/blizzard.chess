@@ -12,9 +12,10 @@
   --c-brilliant: #2bc0d0; --c-best: #4fae5a; --c-excellent: #86b83a; --c-good: #86a883; --c-book: #8f84dc;
   --c-inaccuracy: #e8b52c; --c-miss: #e0558c; --c-mistake: #ec8130; --c-blunder: #e0463f;
   --panel-w: 360px;
-  --pbar: 52px;
+  --pbar: 46px;
   --topbar: 0px;
-  --bs: min(calc(100vh - var(--topbar) - 2 * var(--pbar) - 56px), calc(100vw - var(--rail) - var(--panel-w) - 96px));
+  /* доска — как можно крупнее: почти вся высота окна; --bs-scale — размер, выбранный уголком доски (0,55…1) */
+  --bs: calc(min(calc(100vh - var(--topbar) - 2 * var(--pbar) - 22px), calc(100vw - var(--rail) - var(--panel-w) - 100px), 1180px) * var(--bs-scale, 1));
 }
 
 /* ---------- Тёмное (по умолчанию): почти чёрный фон, синие акценты */
@@ -198,7 +199,12 @@ input:focus, textarea:focus { outline: none; border-color: var(--accent); }
 .cls-blunder { --cc: var(--c-blunder); }
 
 /* ===================================================================== экран партии */
-.game-layout { display: flex; gap: 28px; padding: 20px clamp(16px, 2.4vw, 36px); align-items: flex-start; justify-content: center; }
+.game-layout { display: flex; gap: 20px; padding: 6px clamp(12px, 2vw, 28px) 10px; align-items: flex-start; justify-content: center; }
+/* уголок доски: потянуть — доска больше или меньше (как на chess.com) */
+.board-resize { position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; z-index: 6; cursor: nwse-resize; touch-action: none; opacity: 0; transition: opacity .15s; }
+.board:hover .board-resize, .board-resize.on { opacity: 1; }
+.board-resize::before { content: ''; position: absolute; right: 4px; bottom: 4px; width: 9px; height: 9px; background: linear-gradient(135deg, transparent 45%, rgba(255, 255, 255, .85) 45%, rgba(255, 255, 255, .85) 55%, transparent 55%, transparent 70%, rgba(255, 255, 255, .85) 70%, rgba(255, 255, 255, .85) 80%, transparent 80%); filter: drop-shadow(0 0 1px rgba(0, 0, 0, .8)); }
+@media (hover: none) { .board-resize { display: none; } }
 .board-col { display: flex; flex-direction: column; flex: none; }
 .board-col.with-eval { flex-direction: row; gap: 10px; align-items: center; }
 .board-stack { display: flex; flex-direction: column; }

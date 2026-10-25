@@ -203,7 +203,7 @@ function FenLesson({ lesson, done, onDone, panel }: { lesson: Extract<Lesson, { 
   return (
     <div className="game-layout lesson">
       <div className="board-col">
-        <Board fen={fen} orientation={side} movable={done ? null : side} lastMove={last} animate onMove={onMove} theme={s.theme} coords={s.showCoords} autoQueen />
+        <Board resizable fen={fen} orientation={side} movable={done ? null : side} lastMove={last} animate onMove={onMove} theme={s.theme} coords={s.showCoords} autoQueen />
       </div>
       {panel(<>{msg}{!done && <button className="btn ghost" onClick={() => { setFen(lesson.fen); setWrong(false); }}><Icon.undo />Reset</button>}</>)}
     </div>

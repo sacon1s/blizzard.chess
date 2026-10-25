@@ -157,6 +157,8 @@ export default function App() {
   const { user } = useAuth();
   const { skin } = useSettings();
   useEffect(() => { document.documentElement.dataset.skin = skin; }, [skin]);
+  const { boardScale } = useSettings();
+  useEffect(() => { document.documentElement.style.setProperty('--bs-scale', String(boardScale || 1)); }, [boardScale]);
   const uid = user ? user.uid : '';
   useEffect(() => { if (uid) settlePending(uid); }, [uid]);
   useEffect(() => {

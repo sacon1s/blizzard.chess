@@ -290,7 +290,7 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
         {s.coach && <EvalBar white={barEntry ? winPct(barEntry) ?? 50 : 50} label={barEntry ? fmtEval(barEntry) : '…'} flipped={orient === 1} />}
         <div className="board-stack">
         <PlayerBar color={top} name={nameOf(top)} sub={subOf(top)} avatar={avatarOf(top)} clock={clockOf(top)} running={!result && clocks.current.running === top} thinking={thinking && top === botColor} />
-        <Board fen={fen} orientation={orient} movable={!result && view === live && !thinking ? playerColor : null} lastMove={last}
+        <Board resizable fen={fen} orientation={orient} movable={!result && view === live && !thinking ? playerColor : null} lastMove={last}
           premovable={!result && view === live && s.premove ? playerColor : null} premoves={premoves} onPremove={onPremove}
           animate onMove={(u) => apply(u)} theme={s.theme} coords={s.showCoords} autoQueen={s.autoQueen}
           arrows={hint && view === live ? [{ from: hint.slice(0, 2), to: hint.slice(2, 4), color: '#5fbf6a' }] : []} />

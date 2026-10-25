@@ -77,7 +77,7 @@ export default function Analysis({ query }: { query: URLSearchParams }) {
       <div className="board-col with-eval">
         <EvalBar white={over ? (res.result === '1-0' ? 100 : res.result === '0-1' ? 0 : 50) : (evalWp ?? 50)} label={over ? res.result : best ? fmtScore(best, side) : '…'} flipped={orient === 1} />
         <div className="board-stack">
-          <Board fen={fen} orientation={orient} movable="both" lastMove={view > 0 ? moves[view - 1] : null} animate
+          <Board resizable fen={fen} orientation={orient} movable="both" lastMove={view > 0 ? moves[view - 1] : null} animate
             onMove={onMove} theme={s.theme} coords={s.showCoords} autoQueen={s.autoQueen} arrows={on ? arrows : []} />
         </div>
       </div>

@@ -164,7 +164,7 @@ export default function ReviewApp() {
           <div className="game-layout fixed-panel ra-pick">
             <div className="board-col">
               <PlayerBar color={1} name="Black" avatar={<Icon.user />} />
-              <Board fen={START_FEN} orientation={0} movable={null} lastMove={null} theme={s.theme} coords={s.showCoords} />
+              <Board resizable fen={START_FEN} orientation={0} movable={null} lastMove={null} theme={s.theme} coords={s.showCoords} />
               <PlayerBar color={0} name="White" avatar={<Icon.user />} />
             </div>
             <aside className="side-panel">

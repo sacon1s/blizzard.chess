@@ -18,9 +18,9 @@ export function makeStore<T extends object>(key: string, def: T) {
   };
 }
 
-export interface Settings { skin: string; pieces: string; theme: string; sound: boolean; showCoords: boolean; autoQueen: boolean; botLevel: number; botColor: 'white' | 'black' | 'random'; botClock: string; coach: boolean; premove: boolean; puzzleLevel: 'easier' | 'normal' | 'harder'; chat: boolean; notify: boolean }
+export interface Settings { skin: string; pieces: string; theme: string; sound: boolean; showCoords: boolean; autoQueen: boolean; botLevel: number; botColor: 'white' | 'black' | 'random'; botClock: string; coach: boolean; premove: boolean; boardScale: number; puzzleLevel: 'easier' | 'normal' | 'harder'; chat: boolean; notify: boolean }
 export const settings = makeStore<Settings>('settings', {
-  skin: 'dark', pieces: 'maestro', theme: 'brown', sound: true, showCoords: true, autoQueen: false, botLevel: 5, botColor: 'random', botClock: 'none', coach: true, premove: true, puzzleLevel: 'easier', chat: true, notify: false,
+  skin: 'dark', pieces: 'maestro', theme: 'brown', sound: true, showCoords: true, autoQueen: false, botLevel: 5, botColor: 'random', botClock: 'none', coach: true, premove: true, boardScale: 1, puzzleLevel: 'easier', chat: true, notify: false,
 });
 export function useSettings(): Settings {
   return useSyncExternalStore(settings.subscribe, settings.get);

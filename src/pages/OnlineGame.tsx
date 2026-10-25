@@ -189,7 +189,7 @@ function Live({ g }: { g: OGame }) {
       <div className="board-col">
         <PlayerBar color={top} name={nameOf(top)} sub={subOf(top)} avatar={<PlayerAvatar uid={top === 0 ? g.white : g.black} />} flag={<FlagOf uid={top === 0 ? g.white : g.black} />} clock={clockOf(top)} running={live && nMoves >= 2 && sideToMove === top}
           uid={top === 0 ? g.white : g.black} speed={g.speed} place="top" />
-        <Board fen={fen} orientation={orient} movable={myColor !== null && live && shown === N && !pending ? myColor : null}
+        <Board resizable fen={fen} orientation={orient} movable={myColor !== null && live && shown === N && !pending ? myColor : null}
           premovable={myColor !== null && live && shown === N && s.premove ? myColor : null} premoves={premoves} onPremove={onPremove}
           lastMove={shown > 0 ? moves[shown - 1] : null} animate onMove={onMove} theme={s.theme} coords={s.showCoords} autoQueen={s.autoQueen} />
         <PlayerBar color={bottom} name={nameOf(bottom)} sub={subOf(bottom)} avatar={<PlayerAvatar uid={bottom === 0 ? g.white : g.black} />} flag={<FlagOf uid={bottom === 0 ? g.white : g.black} />} clock={clockOf(bottom)} running={live && nMoves >= 2 && sideToMove === bottom}

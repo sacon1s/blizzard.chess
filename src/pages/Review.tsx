@@ -154,7 +154,7 @@ export function ReviewGame({ game, onBack, analyseUrl }: { game: SavedGame; onBa
         <EvalBar white={wp === null ? 50 : wp} label={fmtEval(e)} flipped={orient === 1} />
         <div className="board-stack">
           {barOf(top, 'top')}
-          <Board fen={fens[view]} orientation={orient} movable={null} lastMove={last} animate theme={s.theme} coords={s.showCoords}
+          <Board resizable fen={fens[view]} orientation={orient} movable={null} lastMove={last} animate theme={s.theme} coords={s.showCoords}
             arrows={arrows} badge={last && c ? { sq: last.to, cls: c.cls } : null} />
           {barOf(bottom, 'bottom')}
         </div>
@@ -306,7 +306,7 @@ function RetryMistakes({ game, moves, entries, list, onExit }: { game: SavedGame
     <div className="game-layout review fixed-panel">
       <div className="board-col">
         <div className="pbar puzzle-bar"><span className={'turn ' + (color ? 'black' : 'white')} /><b>Find a better move for {color ? 'Black' : 'White'}</b></div>
-        <Board fen={fen} orientation={color} movable={state === 'play' || state === 'wrong' ? color : null} lastMove={null} animate onMove={(u) => { if (state === 'wrong') { setFen(mv.fenBefore); setState('play'); setTimeout(() => onMove(u), 0); } else onMove(u); }}
+        <Board resizable fen={fen} orientation={color} movable={state === 'play' || state === 'wrong' ? color : null} lastMove={null} animate onMove={(u) => { if (state === 'wrong') { setFen(mv.fenBefore); setState('play'); setTimeout(() => onMove(u), 0); } else onMove(u); }}
           theme={s.theme} coords={s.showCoords} autoQueen={s.autoQueen} arrows={arrows}
           badge={null} />
         <div className="pbar" />

@@ -167,7 +167,7 @@ function PuzzleView({ pz, strict, idle, onSolved, onFailed, panel, header }: {
           <b>{idle ? 'Puzzle Rush' : done ? (state === 'solved' ? 'Solved' : 'Puzzle failed') : state === 'intro' ? 'Your opponent moves…' : `Find the best move for ${player ? 'Black' : 'White'}`}</b>
           {header}
         </div>
-        <Board fen={fen} orientation={player} movable={(state === 'play' || state === 'wrong') && k % 2 === 1 ? player : null} lastMove={wrongMove || last}
+        <Board resizable fen={fen} orientation={player} movable={(state === 'play' || state === 'wrong') && k % 2 === 1 ? player : null} lastMove={wrongMove || last}
           animate onMove={onMove} theme={s.theme} coords={s.showCoords} autoQueen={s.autoQueen}
           badge={(state === 'wrong' || (strict && state === 'failed')) && wrongMove ? { sq: wrongMove.to, cls: 'blunder' } : done && last && state === 'solved' ? { sq: last.to, cls: 'best' } : null}
           highlight={hintSq && !done ? parseSq(hintSq) : null} />

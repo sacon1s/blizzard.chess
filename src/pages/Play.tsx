@@ -57,7 +57,7 @@ export default function Play({ initialTab }: { initialTab?: Tab }) {
     <div className="game-layout fixed-panel play">
       <div className="board-col">
         {top}
-        <Board fen={START_FEN} orientation={orient} movable={null} lastMove={null} theme={s.theme} coords={s.showCoords} />
+        <Board resizable fen={START_FEN} orientation={orient} movable={null} lastMove={null} theme={s.theme} coords={s.showCoords} />
         {bottom}
       </div>
       <aside className="side-panel">

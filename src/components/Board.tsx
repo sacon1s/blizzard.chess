@@ -1,5 +1,6 @@
 // Доска: ход перетаскиванием или двумя щелчками, выбор фигуры при превращении, анимация хода,
 // стрелки движка и свои пометки правой кнопкой (поле — щелчок, стрелка — протянуть; Shift/Ctrl/Alt — другой цвет).
+import { settings } from '../lib/store';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { pieceImgs } from '../lib/pieces';
 import { useSettings } from '../lib/store';
@@ -23,6 +24,7 @@ export interface BoardProps {
   premovable?: 0 | 1 | null; // чья сторона может делать предход, пока ходит соперник
   premoves?: string[]; // очередь предходов (как на chess.com — несколько подряд)
   onPremove?: (uci: string | null) => void; // добавить предход или (null) отменить все
+  resizable?: boolean; // уголок в правом нижнем углу меняет размер доски (настройка boardScale)
 }
 
 const MARK_COLORS: Record<string, string> = { o: '#f0a33a', g: '#5fbf6a', r: '#e2534b', b: '#4aa3df' };
@@ -63,6 +65,29 @@ function arrowPoly(f: number, t: number, o: 0 | 1, color: string, opacity: numbe
   const pts = [[sx + p1x * h, sy + p1y * h], L[0], [bx + p2x * h, by + p2y * h], [bx + p2x * hw, by + p2y * hw], [x2, y2],
     [bx - p2x * hw, by - p2y * hw], [bx - p2x * h, by - p2y * h], L[1], [sx - p1x * h, sy - p1y * h]];
   return <polygon key={key} points={fmt(pts)} fill={color} opacity={opacity} />;
+}
+
+// тянем уголок: новый размер = старый + среднее смещение по x и y; доля от наибольшего — от 0,55 до 1
+function ResizeGrip({ boardRef }: { boardRef: React.RefObject<HTMLDivElement> }) {
+  const [on, setOn] = useState(false);
+  function down(e: React.PointerEvent) {
+    e.stopPropagation(); e.preventDefault();
+    const el = boardRef.current; if (!el) return;
+    const size = el.getBoundingClientRect().width, scale = settings.get().boardScale || 1, max = size / scale;
+    const x0 = e.clientX, y0 = e.clientY;
+    let next = scale;
+    setOn(true);
+    const move = (ev: PointerEvent) => {
+      next = Math.min(1, Math.max(0.55, (size + ((ev.clientX - x0) + (ev.clientY - y0)) / 2) / max));
+      document.documentElement.style.setProperty('--bs-scale', next.toFixed(4));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
+      setOn(false); settings.set({ boardScale: Math.round(next * 1000) / 1000 });
+    };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  }
+  return <span className={'board-resize' + (on ? ' on' : '')} onPointerDown={down} title="Drag to resize the board" aria-hidden="true" />;
 }
 
 export default function Board(p: BoardProps) {
@@ -256,6 +281,7 @@ export default function Board(p: BoardProps) {
       {squares}
       <svg className="arrows" viewBox="0 0 8 8" aria-hidden="true">{arrowEls}</svg>
       {promoEl}
+      {p.resizable && <ResizeGrip boardRef={boardRef} />}
       {drag && dragPiece ? <div className="drag-ghost" style={{ width: ghostSize, height: ghostSize, left: drag.x, top: drag.y, backgroundImage: `url("${PIECE_IMG[pieceKey(dragPiece)]}")` }} /> : null}
     </div>
   );
