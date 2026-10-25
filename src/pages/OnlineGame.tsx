@@ -142,7 +142,7 @@ function Live({ g }: { g: OGame }) {
       saveGame({
         id: g.id, date: new Date(g.created || Date.now()).toISOString(), white: g.wName || 'White', black: g.bName || 'Black', startFen: startOf(g),
         moves: movesOf(g), sans: moves.map((m) => m.san), result: g.result, reason: g.reason || '', source: 'online', playerColor: myColor ?? undefined,
-        event: `${g.rated ? 'Rated' : 'Casual'} ${SPEED_LABEL[g.speed].toLowerCase()} game`,
+        event: `${g.rated ? 'Rated' : 'Casual'} ${SPEED_LABEL[g.speed].toLowerCase()} game`, wUid: g.white, bUid: g.black, speed: g.speed,
       });
     }
   }, [g.status, g.settled && uid ? g.settled[uid] : undefined]); // eslint-disable-line react-hooks/exhaustive-deps

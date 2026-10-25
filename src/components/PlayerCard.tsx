@@ -31,7 +31,8 @@ export function PlayerCard({ uid, speed, place, onClose }: { uid: string; speed?
   }, [onClose]);
   const speeds: Speed[] = ['bullet', 'blitz', 'rapid', 'classical'];
   const total = p ? (p.wins || 0) + (p.draws || 0) + (p.losses || 0) : 0;
-  const href = p ? `${location.pathname}#/profile/${encodeURIComponent(p.name)}` : '#';
+  const base = (window as unknown as { BLZ_PROFILE_BASE?: string }).BLZ_PROFILE_BASE || location.pathname;
+  const href = p ? `${base}#/profile/${encodeURIComponent(p.name)}` : '#';
   return (
     <div className={'player-card ' + place} ref={box} role="dialog" aria-label={p ? p.name : 'Player'}>
       {p === undefined ? <p className="muted small">Loading…</p> : p === null ? <p className="muted small">This player’s profile couldn’t be loaded.</p> : (

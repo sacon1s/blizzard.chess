@@ -94,6 +94,7 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
       id: gameId.current, date: new Date().toISOString(), white: playerColor === 0 ? me : `Blizzard ${botInfo.name}`,
       black: playerColor === 1 ? me : `Blizzard ${botInfo.name}`, startFen: START_FEN, moves: ms.map((m) => m.uci),
       sans: ms.map((m) => m.san), result: r.result, reason: r.reason, source: 'bot', playerColor, event: `vs bot, level ${level}`,
+      ...(user ? (playerColor === 0 ? { wUid: user.uid } : { bUid: user.uid }) : {}),
     });
   }, [playerColor, me, botInfo.name, level]);
 

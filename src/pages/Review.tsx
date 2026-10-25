@@ -7,7 +7,8 @@ import ClsSvg, { CLS_LABEL as MOVE_CLASS_LABELS } from '../components/ClsIcon';
 import { START_FEN, newPos, moveNumber, toPgn, REASONS } from '../lib/chess';
 import { ref, get } from 'firebase/database';
 import { db } from '../lib/firebase';
-import { useAuth } from '../lib/auth';
+import { useAuth, uidByName } from '../lib/auth';
+import { PlayerAvatar } from '../components/Avatar';
 import { award } from '../lib/achievements';
 import { analyst } from '../lib/engine';
 import { buildMoves, entryFromInfo, terminalEntry, classifyAll, accuracy, counts, fmtEval, winPct, coachComment, gameRatings, type Entry, type Cls } from '../lib/review';
@@ -37,7 +38,7 @@ export default function Review({ id }: { id?: string }) {
       setG({
         id, date: new Date(v.created || Date.now()).toISOString(), white: v.wName || 'White', black: v.bName || 'Black', startFen: START_FEN,
         moves: ms, sans: b.moves.map((m) => m.san), result: v.result || '*', reason: v.reason || '', source: 'online', playerColor: color,
-        event: `${v.rated ? 'Rated' : 'Casual'} game`,
+        event: `${v.rated ? 'Rated' : 'Casual'} game`, wUid: v.white, bUid: v.black, speed: v.speed,
       });
     }, () => alive && setG(null));
     return () => { alive = false; };
@@ -126,6 +127,19 @@ export function ReviewGame({ game, onBack, analyseUrl }: { game: SavedGame; onBa
   if (showBest && e && e.best) arrows.push({ from: e.best.slice(0, 2), to: e.best.slice(2, 4), color: '#4aa3df', opacity: 0.7 });
   const top = (orient ^ 1) as 0 | 1, bottom = orient;
   const nameOf = (side: 0 | 1) => (side === 0 ? game.white : game.black);
+  // игроки Blizzard Chess: uid из партии, а у старых сохранённых партий — по нику (ники уникальны)
+  const [uids, setUids] = useState<[string | undefined, string | undefined]>([game.wUid, game.bUid]);
+  useEffect(() => {
+    if (game.source === 'import' || (uids[0] && uids[1])) return;
+    let alive = true;
+    const look = (n: string) => (/^[A-Za-z0-9_-]{2,20}$/.test(n) ? uidByName(n).catch(() => null) : Promise.resolve(null));
+    Promise.all([uids[0] ? uids[0] : look(game.white), uids[1] ? uids[1] : look(game.black)]).then(([w, b]) => { if (alive) setUids([w || undefined, b || undefined]); });
+    return () => { alive = false; };
+  }, [game.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const barOf = (side: 0 | 1, place: 'top' | 'bottom') => (
+    <PlayerBar color={side} name={nameOf(side)} sub={accOf(side) !== null ? `Accuracy ${accOf(side)!.toFixed(1)}` : ''}
+      avatar={uids[side] ? <PlayerAvatar uid={uids[side]} /> : <Icon.user />} uid={uids[side]} speed={game.speed} place={place} />
+  );
   const accOf = (side: 0 | 1) => (side === 0 ? acc.white : acc.black);
 
   function copyPgn() {
@@ -139,10 +153,10 @@ export function ReviewGame({ game, onBack, analyseUrl }: { game: SavedGame; onBa
       <div className="board-col with-eval">
         <EvalBar white={wp === null ? 50 : wp} label={fmtEval(e)} flipped={orient === 1} />
         <div className="board-stack">
-          <PlayerBar color={top} name={nameOf(top)} sub={accOf(top) !== null ? `Accuracy ${accOf(top)!.toFixed(1)}` : ''} avatar={<Icon.user />} />
+          {barOf(top, 'top')}
           <Board fen={fens[view]} orientation={orient} movable={null} lastMove={last} animate theme={s.theme} coords={s.showCoords}
             arrows={arrows} badge={last && c ? { sq: last.to, cls: c.cls } : null} />
-          <PlayerBar color={bottom} name={nameOf(bottom)} sub={accOf(bottom) !== null ? `Accuracy ${accOf(bottom)!.toFixed(1)}` : ''} avatar={<Icon.user />} />
+          {barOf(bottom, 'bottom')}
         </div>
       </div>
       <aside className="side-panel">

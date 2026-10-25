@@ -30,6 +30,7 @@ export function useSettings(): Settings {
 export interface SavedGame {
   id: string; date: string; white: string; black: string; startFen: string; moves: string[]; sans: string[];
   result: string; reason: string; source: 'bot' | 'online' | 'import'; playerColor?: 0 | 1; event?: string;
+  wUid?: string; bUid?: string; speed?: 'bullet' | 'blitz' | 'rapid' | 'classical'; // игроки Blizzard Chess — для карточки игрока в разборе
 }
 export function savedGames(): SavedGame[] { return read<SavedGame[]>('games', []); }
 export function saveGame(g: SavedGame) {

@@ -14,6 +14,8 @@ import { ref, get } from 'firebase/database';
 import { db } from '../lib/firebase';
 
 const CHESS_SITE = 'https://sacon1s.github.io/blizzard.chess/';
+// карточка игрока открывает профиль на сайте Blizzard Chess
+(window as unknown as { BLZ_PROFILE_BASE?: string }).BLZ_PROFILE_BASE = CHESS_SITE;
 type Source = 'chesscom' | 'lichess' | 'blizzard' | 'pgn';
 const SOURCES: { v: Source; label: string; hint: string }[] = [
   { v: 'chesscom', label: 'chess.com', hint: 'chess.com username' },
@@ -99,7 +101,7 @@ async function loadBlizzard(user: string): Promise<Item[]> {
       const b = buildMoves(start, ms);
       return {
         id: 'bc-' + ug.id, date: new Date(v.created || ug.date).toISOString(), white: v.wName || 'White', black: v.bName || 'Black', startFen: start,
-        moves: ms, sans: b.moves.map((m) => m.san), result: v.result || '*', reason: v.reason || '', source: 'online', playerColor: ug.color,
+        moves: ms, sans: b.moves.map((m) => m.san), result: v.result || '*', reason: v.reason || '', source: 'online', playerColor: ug.color, wUid: v.white, bUid: v.black, speed: v.speed,
       } as SavedGame;
     },
   }));
