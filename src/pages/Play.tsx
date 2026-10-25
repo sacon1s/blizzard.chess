@@ -51,7 +51,7 @@ export default function Play({ initialTab }: { initialTab?: Tab }) {
   const top = tab === 'bots'
     ? <PlayerBar color={(orient ^ 1) as 0 | 1} name={bot.name} sub={bot.elo} avatar={<BotAvatar level={bot.level} size={36} />} />
     : <PlayerBar color={(orient ^ 1) as 0 | 1} name={seeking ? 'Searching for an opponent…' : 'Opponent'} avatar={<Icon.user />} thinking={!!seeking} />;
-  const bottom = <PlayerBar color={orient} name={profile ? profile.name : 'You'} sub={profile ? String(ratingOf(profile, mySpeed)) : ''} avatar={profile && profile.avatar ? <AvatarImg avatar={profile.avatar} photo={profile.photo} size={36} /> : <Icon.user />} />;
+  const bottom = <PlayerBar color={orient} name={profile ? profile.name : 'You'} sub={profile ? String(ratingOf(profile, mySpeed)) : ''} avatar={profile ? <AvatarImg avatar={profile.avatar} photo={profile.photo} size={36} /> : <Icon.user />} />;
 
   return (
     <div className="game-layout fixed-panel play">

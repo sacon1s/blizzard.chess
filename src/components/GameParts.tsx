@@ -1,6 +1,8 @@
 // Общие части экрана партии: плашка игрока с часами, список ходов, кнопки перехода по ходам, шкала оценки.
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from './icons';
+import { PlayerCard } from './PlayerCard';
+import type { Speed } from '../lib/auth';
 import ClsIcon from './ClsIcon';
 import type { MoveRec } from '../lib/chess';
 
@@ -12,14 +14,25 @@ export function fmtClock(ms: number): string {
   return h ? `${h}:${String(m % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : `${m}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export function PlayerBar(p: { name: string; sub?: string; avatar?: React.ReactNode; flag?: React.ReactNode; clock?: number | null; running?: boolean; color: 0 | 1; thinking?: boolean; captured?: string }) {
-  return (
-    <div className={'pbar' + (p.running ? ' on' : '')}>
+// uid — у игрока есть профиль: щелчок по аватару или имени открывает карточку (PlayerCard)
+export function PlayerBar(p: { name: string; sub?: string; avatar?: React.ReactNode; flag?: React.ReactNode; clock?: number | null; running?: boolean; color: 0 | 1; thinking?: boolean; captured?: string; uid?: string; speed?: Speed; place?: 'top' | 'bottom' }) {
+  const [card, setCard] = useState(false);
+  const close = useCallback(() => setCard(false), []);
+  const who = (
+    <>
       <div className={'avatar ' + (p.color ? 'black' : 'white')}>{p.avatar}</div>
       <div className="pname">
         <b>{p.name}{p.flag}</b>
         {p.sub && <span>{p.sub}</span>}
       </div>
+    </>
+  );
+  return (
+    <div className={'pbar' + (p.running ? ' on' : '')}>
+      {p.uid ? (
+        <button className="pbar-who" onClick={() => setCard(!card)} aria-expanded={card} title="Player info">{who}</button>
+      ) : who}
+      {card && p.uid && <PlayerCard uid={p.uid} speed={p.speed} place={p.place || 'top'} onClose={close} />}
       {p.thinking && <span className="thinking" aria-label="Thinking"><i /><i /><i /></span>}
       {p.clock !== null && p.clock !== undefined && (
         <div className={'clock' + (p.running ? ' run' : '') + (p.clock < 20000 ? ' low' : '')}>

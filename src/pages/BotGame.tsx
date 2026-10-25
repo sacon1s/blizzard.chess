@@ -272,7 +272,7 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
     const base = side === playerColor ? (profile ? `${Math.round(profile.ratings.rapid)}` : '') : botInfo.elo;
     return [base, d > 0 ? `+${d}` : ''].filter(Boolean).join('  ');
   };
-  const avatarOf = (side: 0 | 1) => (side === playerColor ? (profile && profile.avatar ? <AvatarImg avatar={profile.avatar} photo={profile.photo} size={36} /> : <Icon.user />) : <BotAvatar level={level} size={36} />);
+  const avatarOf = (side: 0 | 1) => (side === playerColor ? (profile ? <AvatarImg avatar={profile.avatar} photo={profile.photo} size={36} /> : <Icon.user />) : <BotAvatar level={level} size={36} />);
   // шкала преимущества — пока включён тренер; пока позиция считается, держим прошлое значение
   const viewKey = moves.slice(0, view).map((m) => m.uci).join(' ');
   useEffect(() => { if (s.coach) evalAt(viewKey ? viewKey.split(' ') : [], fen); }, [s.coach, viewKey]); // eslint-disable-line react-hooks/exhaustive-deps

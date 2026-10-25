@@ -1,37 +1,29 @@
-// Аватар игрока и флаг страны. Аватар — код в профиле:
-//   «a:fox» — нарисованная картинка (AvatarArt.tsx), «p» — своё фото (users/uid/photo, маленький JPEG в data:),
-//   «N3» — фигура на цветном фоне (так было до 1.0, по-прежнему работает).
+// Аватар игрока и флаг страны. Аватар — своё фото (код «p» в профиле, картинка — users/uid/photo, маленький JPEG в data:)
+// или, если фото нет, стандартная картинка: серая пешка на тёмном фоне.
 import { useEffect, useState } from 'react';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../lib/firebase';
-import { Icon } from './icons';
-import { pieceImgs } from '../lib/pieces';
-import { useSettings } from '../lib/store';
 import { countryName } from '../lib/countries';
-import { ArtSvg, artColor } from './AvatarArt';
 
-export const AVATAR_COLORS = ['#3d8ad6', '#4fae5a', '#e0463f', '#ec8130', '#8f84dc', '#2bc0d0', '#e0558c', '#6b6b6b'];
-export const AVATAR_PIECES = ['K', 'Q', 'R', 'B', 'N', 'P'];
+// цвет обложки профиля
+export function avatarColor(_avatar?: string | null): string { return '#3a5570'; }
 
-// основной цвет аватара — для фона шапки профиля
-export function avatarColor(avatar?: string | null): string {
-  if (avatar && avatar.startsWith('a:')) return artColor(avatar.slice(2));
-  if (avatar && /^[KQRBNP][0-7]$/.test(avatar)) return AVATAR_COLORS[+avatar[1]];
-  return '#3d8ad6';
+function DefaultPawn() {
+  return (
+    <svg viewBox="0 0 64 64" width="100%" height="100%" aria-hidden="true">
+      <rect width="64" height="64" fill="#3b3b3b" />
+      <path d="M32 11a8.5 8.5 0 0 1 5.3 15.2c2.4 1.4 3.9 3.6 3.9 6.1 0 .9-.2 1.7-.5 2.4H23.3c-.3-.7-.5-1.5-.5-2.4 0-2.5 1.5-4.7 3.9-6.1A8.5 8.5 0 0 1 32 11Z" fill="#9b9b9b" />
+      <path d="M25.6 36.5h12.8L41 48H23Z" fill="#9b9b9b" />
+      <rect x="16.5" y="49.5" width="31" height="7" rx="3" fill="#9b9b9b" />
+    </svg>
+  );
 }
 
 export function AvatarImg({ avatar, photo, size = 36, round }: { avatar?: string | null; photo?: string | null; size?: number; round?: boolean }) {
-  const s = useSettings();
   const st = { width: size, height: size };
   const cls = 'ava-img' + (round ? ' round' : '');
   if (avatar === 'p' && photo && photo.startsWith('data:image/')) return <span className={cls} style={st}><img className="ava-photo" src={photo} alt="" /></span>;
-  if (avatar && avatar.startsWith('a:')) return <span className={cls + ' art'} style={st}><ArtSvg id={avatar.slice(2)} /></span>;
-  if (!avatar || !/^[KQRBNP][0-7]$/.test(avatar)) return <span className={cls + ' empty'} style={st}><Icon.user /></span>;
-  return (
-    <span className={cls} style={{ ...st, background: AVATAR_COLORS[+avatar[1]] }}>
-      <img src={pieceImgs(s.pieces)['w' + avatar[0]]} alt="" />
-    </span>
-  );
+  return <span className={cls + ' art'} style={st}><DefaultPawn /></span>;
 }
 export function Flag({ country, size = 16 }: { country?: string | null; size?: number }) {
   if (!country || !/^[a-z]{2}$/.test(country)) return null;

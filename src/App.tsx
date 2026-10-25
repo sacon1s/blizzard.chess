@@ -79,7 +79,7 @@ function Rail({ section }: { section: string }) {
         {profile && <Search />}
         <a href="#/settings" className={'rail-item icon-only' + (section === 'settings' ? ' on' : '')} aria-label="Settings" title="Settings"><Icon.gear /></a>
         <a href={'#' + me} className={'rail-item' + (section === 'profile' || section === 'login' ? ' on' : '')}>
-          {profile && profile.avatar ? <AvatarImg avatar={profile.avatar} photo={profile.photo} size={22} /> : <Icon.user />}<span>{profile ? profile.name : user ? 'Account' : 'Sign in'}</span>
+          {profile ? <AvatarImg avatar={profile.avatar} photo={profile.photo} size={22} /> : <Icon.user />}<span>{profile ? profile.name : user ? 'Account' : 'Sign in'}</span>
           {requests.length > 0 && <i className="badge-dot" aria-label={`${requests.length} friend requests`} />}
         </a>
       </div>

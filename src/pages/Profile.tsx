@@ -7,8 +7,7 @@ import { useFriendState, useFriends, useRequests, useOnlineSet, sendRequest, can
 import { savedGames } from '../lib/store';
 import { go } from '../lib/router';
 import { Icon } from '../components/icons';
-import { AvatarImg, PlayerAvatar, Flag, AVATAR_COLORS, AVATAR_PIECES, avatarColor, photoToDataUrl } from '../components/Avatar';
-import { AVATAR_ART } from '../components/AvatarArt';
+import { AvatarImg, PlayerAvatar, Flag, avatarColor, photoToDataUrl } from '../components/Avatar';
 import { COUNTRIES, countryName } from '../lib/countries';
 import { award, ACHIEVEMENTS, achStore } from '../lib/achievements';
 import { AchBadge } from '../components/AchIcon';
@@ -43,7 +42,8 @@ export function UserGameList({ games, empty }: { games: (UserGame & { id: string
   );
 }
 
-function FriendButton({ me, other }: { me: P; other: P }) {
+// compact — в карточке игрока во время партии: без кнопки вызова, чтобы не уходить из партии
+export function FriendButton({ me, other, compact }: { me: P; other: P; compact?: boolean }) {
   const st = useFriendState(me.uid, other.uid);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -52,7 +52,7 @@ function FriendButton({ me, other }: { me: P; other: P }) {
   if (st === 'friends') {
     return (
       <>
-        <button className="btn primary" onClick={() => go(`/?tab=friends&with=${other.uid}`)}><Icon.online />Challenge</button>
+        {!compact && <button className="btn primary" onClick={() => go(`/?tab=friends&with=${other.uid}`)}><Icon.online />Challenge</button>}
         {confirm
           ? <button className="btn danger" disabled={busy} onClick={() => run(() => removeFriend(me.uid, other.uid))}>Remove from friends</button>
           : <button className="btn" onClick={() => { setConfirm(true); setTimeout(() => setConfirm(false), 3000); }}>Friends ✓</button>}
@@ -237,68 +237,49 @@ export default function Profile({ name }: { name?: string }) {
   );
 }
 
-// изменение профиля: картинка (нарисованная, фигура или своё фото), страна, пара слов о себе
+// изменение профиля: картинка (своё фото или стандартная), страна, пара слов о себе
 function EditProfile({ p, onSaved, onClose }: { p: P; onSaved: (x: Partial<P>) => void; onClose: () => void }) {
-  const [avatar, setAvatar] = useState(p.avatar || 'a:fox');
+  const [usePhoto, setUsePhoto] = useState(p.avatar === 'p' && !!p.photo);
   const [photo, setPhoto] = useState(p.photo || '');
-  const [kind, setKind] = useState<'art' | 'piece' | 'photo'>(p.avatar === 'p' ? 'photo' : p.avatar && /^[KQRBNP]/.test(p.avatar) ? 'piece' : 'art');
   const [country, setCountry] = useState(p.country || '');
   const [about, setAbout] = useState(p.about || '');
   const [state, setState] = useState<'' | 'saving' | 'saved' | 'error'>('');
   const [photoErr, setPhotoErr] = useState('');
   const file = useRef<HTMLInputElement>(null);
-  const piece = /^[KQRBNP][0-7]$/.test(avatar) ? avatar[0] : 'N', color = /^[KQRBNP][0-7]$/.test(avatar) ? +avatar[1] : 0;
   async function pick(f: File | undefined) {
     if (!f) return;
     setPhotoErr('');
-    try { const d = await photoToDataUrl(f); setPhoto(d); setAvatar('p'); } catch { setPhotoErr('Couldn’t read this picture. Try a JPG or PNG.'); }
+    try { const d = await photoToDataUrl(f); setPhoto(d); setUsePhoto(true); } catch { setPhotoErr('Couldn’t read this picture. Try a JPG or PNG.'); }
   }
   function save() {
     setState('saving');
+    const avatar = usePhoto && photo ? 'p' : null;
     const x: Record<string, unknown> = { avatar, country: country || null, about: about.trim().slice(0, 160) || null };
-    if (avatar === 'p') x.photo = photo;
+    if (avatar) x.photo = photo;
     update(ref(db, 'users/' + p.uid), x).then(() => {
-      onSaved({ avatar, country: country || undefined, about: about.trim() || undefined, photo: avatar === 'p' ? photo : p.photo });
+      onSaved({ avatar: avatar || undefined, country: country || undefined, about: about.trim() || undefined, photo: avatar ? photo : p.photo });
       setState('saved'); setTimeout(() => { setState(''); onClose(); }, 900);
     }, () => setState('error'));
   }
   return (
     <section className="side-box edit-profile">
-      <div className="edit-preview">
-        <AvatarImg avatar={avatar} photo={photo} size={96} />
-        <div>
-          <h2>Profile picture</h2>
-          <div className="seg small" role="tablist">
-            <button role="tab" aria-pressed={kind === 'art'} onClick={() => setKind('art')}>Pictures</button>
-            <button role="tab" aria-pressed={kind === 'piece'} onClick={() => setKind('piece')}>Pieces</button>
-            <button role="tab" aria-pressed={kind === 'photo'} onClick={() => setKind('photo')}>Your photo</button>
-          </div>
-        </div>
-      </div>
-      {kind === 'art' && (
-        <div className="art-grid">
-          {AVATAR_ART.map((a) => (
-            <button key={a.id} className="look-btn" aria-pressed={avatar === 'a:' + a.id} onClick={() => setAvatar('a:' + a.id)} title={a.name} aria-label={a.name}>
-              <AvatarImg avatar={'a:' + a.id} size={56} />
-            </button>
-          ))}
-        </div>
-      )}
-      {kind === 'piece' && (
-        <div className="look-pick">
-          <div className="row">{AVATAR_PIECES.map((x) => <button key={x} className="look-btn" aria-pressed={avatar === x + color} onClick={() => setAvatar(x + color)}><AvatarImg avatar={x + color} size={44} /></button>)}</div>
-          <div className="row">{AVATAR_COLORS.map((c, i) => <button key={c} className="swatch-btn" aria-pressed={/^[KQRBNP]/.test(avatar) && color === i} style={{ background: c }} onClick={() => setAvatar(piece + i)} aria-label={'Colour ' + (i + 1)} />)}</div>
-        </div>
-      )}
-      {kind === 'photo' && (
-        <div className="photo-pick">
+      <h2 className="edit-title">Profile picture</h2>
+      <div className="pic-choice">
+        <button className="pic-opt" aria-pressed={!usePhoto} onClick={() => setUsePhoto(false)}>
+          <AvatarImg size={72} />
+          <span>Standard</span>
+        </button>
+        <button className="pic-opt" aria-pressed={usePhoto} onClick={() => (photo ? setUsePhoto(true) : file.current && file.current.click())}>
+          {photo ? <AvatarImg avatar="p" photo={photo} size={72} /> : <span className="pic-empty"><Icon.camera /></span>}
+          <span>Your photo</span>
+        </button>
+        <div className="pic-actions">
           <input ref={file} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files ? e.target.files[0] : undefined)} />
-          <button className="btn" onClick={() => file.current && file.current.click()}><Icon.camera />{photo ? 'Choose another photo' : 'Upload a photo'}</button>
-          {photo && avatar !== 'p' && <button className="btn ghost" onClick={() => setAvatar('p')}>Use this photo</button>}
+          <button className="btn" onClick={() => file.current && file.current.click()}><Icon.camera />{photo ? 'Upload another photo' : 'Upload a photo'}</button>
           <p className="muted small">Cropped to a square. Everyone who opens your profile can see it.</p>
           {photoErr && <p className="error">{photoErr}</p>}
         </div>
-      )}
+      </div>
       <div className="edit-fields">
         <label className="field">
           <span className="label">Country</span>
@@ -316,7 +297,7 @@ function EditProfile({ p, onSaved, onClose }: { p: P; onSaved: (x: Partial<P>) =
         </label>
       </div>
       <div className="row">
-        <button className="btn primary" onClick={save} disabled={state === 'saving' || (avatar === 'p' && !photo)}>{state === 'saved' ? 'Saved' : state === 'saving' ? 'Saving…' : 'Save'}</button>
+        <button className="btn primary" onClick={save} disabled={state === 'saving'}>{state === 'saved' ? 'Saved' : state === 'saving' ? 'Saving…' : 'Save'}</button>
         <button className="btn ghost" onClick={onClose}>Cancel</button>
         {state === 'error' && <span className="error">Couldn’t save. Check your connection.</span>}
       </div>
