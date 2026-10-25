@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Board from '../components/Board';
 import { MoveList, NavButtons, useArrowKeys, EvalBar } from '../components/GameParts';
 import { Icon } from '../components/icons';
-import { START_FEN, newPos, play, type MoveRec } from '../lib/chess';
+import { E, START_FEN, newPos, play, type MoveRec } from '../lib/chess';
 import { analyst, fmtScore, type Info } from '../lib/engine';
 import { winPct, parseInput } from '../lib/review';
 import { useSettings } from '../lib/store';
@@ -90,7 +90,7 @@ export default function Analysis({ query }: { query: URLSearchParams }) {
         <div className="engine-head">
           <label className="switch">
             <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} />
-            <span />Blizzard 0.9
+            <span />Blizzard {E.VERSION}
           </label>
           <span className="muted">{info ? `depth ${info.depth}` : on && !over ? 'starting…' : ''}</span>
         </div>
