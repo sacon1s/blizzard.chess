@@ -21,4 +21,10 @@ export const Icon = {
   copy: () => <svg viewBox="0 0 24 24" {...P}><rect x="8" y="8" width="11" height="12" rx="2" /><path d="M5 15V5a1 1 0 0 1 1-1h9" /></svg>,
   plus: () => <svg viewBox="0 0 24 24" {...P}><path d="M12 5v14M5 12h14" /></svg>,
   clock: () => <svg viewBox="0 0 24 24" {...P}><circle cx="12" cy="13" r="7.5" /><path d="M12 9v4l2.5 2" /><path d="M10 3h4" /></svg>,
+  bolt: () => <svg viewBox="0 0 24 24" {...P}><path d="M13.5 3 5.5 13.5H12L10.5 21l8-10.5H12L13.5 3Z" /></svg>,
+  bullet: () => <svg viewBox="0 0 24 24" {...P}><path d="M4 8.5h9.5c3.2 0 5.6 1.6 6.5 3.5-.9 1.9-3.3 3.5-6.5 3.5H4Z" /><path d="M8 8.5v7" /></svg>,
+  hourglass: () => <svg viewBox="0 0 24 24" {...P}><path d="M6.5 3.5h11M6.5 20.5h11" /><path d="M8 3.5c0 4 8 5 8 8.5s-8 4.5-8 8.5M16 3.5c0 4-8 5-8 8.5s8 4.5 8 8.5" /></svg>,
+  camera: () => <svg viewBox="0 0 24 24" {...P}><path d="M4 8.5h3l1.5-2.5h7L17 8.5h3v10.5H4Z" /><circle cx="12" cy="13.5" r="3.3" /></svg>,
+  pencil: () => <svg viewBox="0 0 24 24" {...P}><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5Z" /><path d="m13.5 7 3 3" /></svg>,
+  trophy: () => <svg viewBox="0 0 24 24" {...P}><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" /><path d="M8 6H5.5a2.6 2.6 0 0 0 2.8 3.6M16 6h2.5a2.6 2.6 0 0 1-2.8 3.6" /><path d="M12 13v3.5" /><path d="M8.5 20h7l-.8-3.5H9.3L8.5 20Z" /></svg>,
 };

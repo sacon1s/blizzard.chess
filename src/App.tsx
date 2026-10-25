@@ -7,6 +7,7 @@ import { searchPlayers, useChallenges, useRequests, dropChallenge, acceptRequest
 import { useSettings, settings } from './lib/store';
 import { onAward, mergeRemote, ACHIEVEMENTS } from './lib/achievements';
 import { Icon } from './components/icons';
+import { AvatarImg } from './components/Avatar';
 import { AchBadge } from './components/AchIcon';
 import Play from './pages/Play';
 import BotGame from './pages/BotGame';
@@ -78,7 +79,7 @@ function Rail({ section }: { section: string }) {
         {profile && <Search />}
         <a href="#/settings" className={'rail-item icon-only' + (section === 'settings' ? ' on' : '')} aria-label="Settings" title="Settings"><Icon.gear /></a>
         <a href={'#' + me} className={'rail-item' + (section === 'profile' || section === 'login' ? ' on' : '')}>
-          <Icon.user /><span>{profile ? profile.name : user ? 'Account' : 'Sign in'}</span>
+          {profile && profile.avatar ? <AvatarImg avatar={profile.avatar} photo={profile.photo} size={22} /> : <Icon.user />}<span>{profile ? profile.name : user ? 'Account' : 'Sign in'}</span>
           {requests.length > 0 && <i className="badge-dot" aria-label={`${requests.length} friend requests`} />}
         </a>
       </div>

@@ -9,7 +9,7 @@ export interface Profile {
   uid: string; name: string; created: number; country?: string; bio?: string;
   ratings: Record<Speed, number>; games: Record<Speed, number>; wins: number; draws: number; losses: number;
   puzzle?: { rating: number; solved: number; failed: number };
-  avatar?: string; rush?: number; ach?: Record<string, number>;
+  avatar?: string; photo?: string; about?: string; rush?: number; ach?: Record<string, number>;
   hist?: Partial<Record<Speed, Record<string, { r: number; t: number }>>>;
 }
 export const DEFAULT_RATING = 1200;

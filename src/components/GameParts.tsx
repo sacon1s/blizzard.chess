@@ -21,7 +21,14 @@ export function PlayerBar(p: { name: string; sub?: string; avatar?: React.ReactN
         {p.sub && <span>{p.sub}</span>}
       </div>
       {p.thinking && <span className="thinking" aria-label="Thinking"><i /><i /><i /></span>}
-      {p.clock !== null && p.clock !== undefined && <div className={'clock' + (p.running ? ' run' : '') + (p.clock < 20000 ? ' low' : '')}>{fmtClock(p.clock)}</div>}
+      {p.clock !== null && p.clock !== undefined && (
+        <div className={'clock' + (p.running ? ' run' : '') + (p.clock < 20000 ? ' low' : '')}>
+          <svg className="clock-face" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" /><path className="hand" d="M12 12V6.5" />
+          </svg>
+          <span className="clock-time">{fmtClock(p.clock)}</span>
+        </div>
+      )}
     </div>
   );
 }

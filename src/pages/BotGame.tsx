@@ -4,6 +4,7 @@ import Board from '../components/Board';
 import { PlayerBar, MoveList, NavButtons, useArrowKeys, EvalBar } from '../components/GameParts';
 import { Icon } from '../components/icons';
 import { BotAvatar } from '../components/BotAvatar';
+import { AvatarImg } from '../components/Avatar';
 import { E, START_FEN, newPos, play, gameEnd, posAt, resultText, type MoveRec, type GameEnd } from '../lib/chess';
 import { bot, analyst } from '../lib/engine';
 import { playSound, soundFor } from '../lib/sound';
@@ -271,7 +272,7 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
     const base = side === playerColor ? (profile ? `${Math.round(profile.ratings.rapid)}` : '') : botInfo.elo;
     return [base, d > 0 ? `+${d}` : ''].filter(Boolean).join('  ');
   };
-  const avatarOf = (side: 0 | 1) => (side === playerColor ? <Icon.user /> : <BotAvatar level={level} size={36} />);
+  const avatarOf = (side: 0 | 1) => (side === playerColor ? (profile && profile.avatar ? <AvatarImg avatar={profile.avatar} photo={profile.photo} size={36} /> : <Icon.user />) : <BotAvatar level={level} size={36} />);
   // шкала преимущества — пока включён тренер; пока позиция считается, держим прошлое значение
   const viewKey = moves.slice(0, view).map((m) => m.uci).join(' ');
   useEffect(() => { if (s.coach) evalAt(viewKey ? viewKey.split(' ') : [], fen); }, [s.coach, viewKey]); // eslint-disable-line react-hooks/exhaustive-deps
