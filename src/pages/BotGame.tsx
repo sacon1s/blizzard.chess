@@ -1,7 +1,7 @@
 // Партия с ботом Blizzard: часы, подсказка, отмена хода, ничья, сдача; после партии — разбор.
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import Board from '../components/Board';
-import { PlayerBar, MoveList, NavButtons, useArrowKeys } from '../components/GameParts';
+import { PlayerBar, MoveList, NavButtons, useArrowKeys, EvalBar } from '../components/GameParts';
 import { Icon } from '../components/icons';
 import { BotAvatar } from '../components/BotAvatar';
 import { E, START_FEN, newPos, play, gameEnd, posAt, resultText, type MoveRec, type GameEnd } from '../lib/chess';
@@ -11,7 +11,7 @@ import { BOTS, parseTc, tcLabel } from '../lib/bots';
 import { useSettings, saveGame, newId } from '../lib/store';
 import { go } from '../lib/router';
 import { useAuth } from '../lib/auth';
-import { entryFromInfo, terminalEntry, classifyOne, richMove, coachComment, type Entry, type Cls } from '../lib/review';
+import { entryFromInfo, terminalEntry, classifyOne, richMove, coachComment, winPct, fmtEval, type Entry, type Cls } from '../lib/review';
 import ClsIcon from '../components/ClsIcon';
 import { settings } from '../lib/store';
 import { award } from '../lib/achievements';
@@ -122,20 +122,36 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
   const [note, setNote] = useState<{ k: number; c: Cls; text: string[]; better: string | null; label: string } | null>(null);
   const evals = useRef(new Map<string, Entry>());
   const coachSeq = useRef(0);
-  async function evalAt(ucis: string[], fen: string): Promise<Entry | null> {
+  const [, evalsChanged] = useReducer((x: number) => x + 1, 0);
+  // один поток анализа на всё: оценки для тренера, шкала преимущества и подсказка идут по очереди
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  function enqueue<T>(f: () => Promise<T>): Promise<T> {
+    const p = queue.current.then(f, f);
+    queue.current = p.catch(() => {});
+    return p;
+  }
+  const inflight = useRef(new Map<string, Promise<Entry | null>>());
+  function evalAt(ucis: string[], fen: string): Promise<Entry | null> {
     const key = ucis.join(' ');
     const hit = evals.current.get(key);
-    if (hit) return hit;
-    const p = newPos(fen), end = gameEnd(p);
-    let e: Entry | null;
-    if (end) e = terminalEntry(end);
-    else {
-      const info = await analyst().go(START_FEN, ucis, { movetime: 450 });
-      if (info.stopped) return null;
-      e = entryFromInfo(info, p.side as 0 | 1);
-    }
-    if (e) evals.current.set(key, e);
-    return e;
+    if (hit) return Promise.resolve(hit);
+    const fl = inflight.current.get(key);
+    if (fl) return fl;
+    const pr = enqueue(async () => {
+      const again = evals.current.get(key);
+      if (again) return again;
+      const p = newPos(fen), end = gameEnd(p);
+      let e: Entry | null;
+      if (end) e = terminalEntry(end);
+      else {
+        const info = await analyst().go(START_FEN, ucis, { movetime: 450 });
+        e = info.stopped ? null : entryFromInfo(info, p.side as 0 | 1);
+      }
+      if (e) { evals.current.set(key, e); evalsChanged(); }
+      return e;
+    }).finally(() => inflight.current.delete(key));
+    inflight.current.set(key, pr);
+    return pr;
   }
   async function runCoach(k: number) {
     const seq = ++coachSeq.current;
@@ -231,7 +247,7 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
   async function askHint() {
     if (result || pos.current.side !== playerColor) return;
     setToast('Thinking about a hint…');
-    const info = await analyst().go(START_FEN, movesRef.current.map((m) => m.uci), { movetime: 900 });
+    const info = await enqueue(() => analyst().go(START_FEN, movesRef.current.map((m) => m.uci), { movetime: 900 }));
     setToast('');
     if (info.lines[0]) setHint(info.lines[0].move);
   }
@@ -256,18 +272,28 @@ function BotGameInner({ level, colorParam, tc }: { level: number; colorParam: st
     return [base, d > 0 ? `+${d}` : ''].filter(Boolean).join('  ');
   };
   const avatarOf = (side: 0 | 1) => (side === playerColor ? <Icon.user /> : <BotAvatar level={level} size={36} />);
+  // шкала преимущества — пока включён тренер; пока позиция считается, держим прошлое значение
+  const viewKey = moves.slice(0, view).map((m) => m.uci).join(' ');
+  useEffect(() => { if (s.coach) evalAt(viewKey ? viewKey.split(' ') : [], fen); }, [s.coach, viewKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const shown = useRef<Entry | null>(null);
+  const cur = evals.current.get(viewKey);
+  if (cur) shown.current = cur;
+  const barEntry = cur || shown.current;
   const won = result && ((result.result === '1-0' && playerColor === 0) || (result.result === '0-1' && playerColor === 1));
   const drawn = result && result.result === '1/2-1/2';
 
   return (
     <div className="game-layout fixed-panel">
-      <div className="board-col">
+      <div className={'board-col' + (s.coach ? ' with-eval' : '')}>
+        {s.coach && <EvalBar white={barEntry ? winPct(barEntry) ?? 50 : 50} label={barEntry ? fmtEval(barEntry) : '…'} flipped={orient === 1} />}
+        <div className="board-stack">
         <PlayerBar color={top} name={nameOf(top)} sub={subOf(top)} avatar={avatarOf(top)} clock={clockOf(top)} running={!result && clocks.current.running === top} thinking={thinking && top === botColor} />
         <Board fen={fen} orientation={orient} movable={!result && view === live && !thinking ? playerColor : null} lastMove={last}
           premovable={!result && view === live && s.premove ? playerColor : null} premoves={premoves} onPremove={onPremove}
           animate onMove={(u) => apply(u)} theme={s.theme} coords={s.showCoords} autoQueen={s.autoQueen}
           arrows={hint && view === live ? [{ from: hint.slice(0, 2), to: hint.slice(2, 4), color: '#5fbf6a' }] : []} />
         <PlayerBar color={bottom} name={nameOf(bottom)} sub={subOf(bottom)} avatar={avatarOf(bottom)} clock={clockOf(bottom)} running={!result && clocks.current.running === bottom} thinking={thinking && bottom === botColor} />
+        </div>
       </div>
       <aside className="side-panel">
         <div className="panel-head">

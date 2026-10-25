@@ -2,6 +2,7 @@
 import Board from '../components/Board';
 import { settings, useSettings, THEMES, SKINS } from '../lib/store';
 import { PIECE_SETS, pieceImgs } from '../lib/pieces';
+import { SOUND_SETS, previewSet } from '../lib/sound';
 
 export default function SettingsPage() {
   const s = useSettings();
@@ -53,6 +54,12 @@ export default function SettingsPage() {
         </label>
         <h2 className="label">Sound</h2>
         {toggle('sound', 'Move sounds', 'A click for moves, captures, castling and checks')}
+        <div className="toggle-row">
+          <span><b>Sound set</b><span className="muted">Recorded on real boards. Tap one to hear it.</span></span>
+          <div className="seg">
+            {SOUND_SETS.map((x) => <button key={x.v} aria-pressed={(s.soundSet || 'board2') === x.v} onClick={() => { settings.set({ soundSet: x.v, sound: true }); previewSet(x.v); }}>{x.label}</button>)}
+          </div>
+        </div>
       </section>
     </div>
   );
