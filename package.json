@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:review": "tsc && sh tools/build-review.sh"
   },
   "license": "GPL-3.0-or-later",
   "dependencies": {

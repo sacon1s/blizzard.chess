@@ -655,6 +655,8 @@ select { background: var(--inset); color: var(--text); border: 1px solid var(--l
 .lesson .side-panel p { color: var(--muted); }
 .lesson-title { font-size: 26px; }
 .back-link { color: var(--muted); text-decoration: none; font-size: 13.5px; }
+.back-link.as-btn { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+.back-link.as-btn:hover { color: var(--text); }
 .star { position: absolute; inset: 0; display: grid; place-items: center; font-size: calc(var(--bs) / 14); color: #e8b52c; text-shadow: 0 1px 3px rgba(0, 0, 0, .4); z-index: 1; pointer-events: none; }
 .lesson .board .sq { cursor: pointer; }
 
@@ -679,6 +681,19 @@ select { background: var(--inset); color: var(--text); border: 1px solid var(--l
 .arena-clock span { color: var(--muted); font-size: 13px; font-weight: 600; }
 .arena-clock b { font: 700 36px/1 var(--ui); font-variant-numeric: tabular-nums; }
 .arena-side .arena-link { margin-bottom: 0; }
+
+/* страница разбора на сайте движка */
+.ra-head h1 { font-size: 26px; margin-bottom: 4px; }
+.ra-form { display: flex; gap: 6px; }
+.ra-form input { flex: 1; min-width: 0; }
+.ra-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ra-list .game-row { width: 100%; text-align: left; cursor: pointer; font: inherit; }
+.ra-list .game-row em { font-style: normal; color: var(--faint); font-weight: 500; font-size: 12px; }
+.ra-pgn { flex: 1; min-height: 200px; }
+.news-pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border: 1px solid var(--line-2); border-radius: 999px; color: var(--text); text-decoration: none; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.news-pill b { background: var(--text); color: var(--bg); border-radius: 999px; padding: 2px 8px; font-size: 11.5px; }
+.ra-news { display: none; }
+.news-pill:hover { border-color: var(--text); color: var(--text); }
 
 /* ===================================================================== узкие экраны */
 
@@ -722,6 +737,10 @@ select { background: var(--inset); color: var(--text); border: 1px solid var(--l
   .ratings { grid-template-columns: 1fr 1fr; }
   .profile-grid, .profile-row, .arena-grid { grid-template-columns: 1fr; }
   .top-search { display: none; }
+  .rail .news-pill { display: none; }
+  .ra-news { display: inline-flex; margin-top: 10px; }
+  .ra-pick .side-panel { order: -1; }
+  .fixed-panel .side-panel > .tab-body { flex: none; overflow: visible; }
   .toasts { bottom: 76px; }
   .notice.big { flex-direction: column; align-items: flex-start; }
 }

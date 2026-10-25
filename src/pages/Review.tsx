@@ -63,7 +63,8 @@ const VERDICT: Record<string, string> = {
 };
 const ORDER = ['brilliant', 'best', 'excellent', 'good', 'book', 'inaccuracy', 'miss', 'mistake', 'blunder'];
 
-function ReviewGame({ game }: { game: SavedGame }) {
+// onBack и analyseUrl — для отдельной страницы разбора на сайте движка
+export function ReviewGame({ game, onBack, analyseUrl }: { game: SavedGame; onBack?: () => void; analyseUrl?: (fen: string) => string }) {
   const s = useSettings();
   const built = useMemo(() => buildMoves(game.startFen, game.moves), [game]);
   const moves = built.moves, N = moves.length;
@@ -145,6 +146,7 @@ function ReviewGame({ game }: { game: SavedGame }) {
         </div>
       </div>
       <aside className="side-panel">
+        {onBack && <button className="back-link as-btn" onClick={onBack}>← Back to games</button>}
         <div className="tabs" role="tablist">
           <button role="tab" aria-selected={tab === 'review'} onClick={() => setTab('review')}>Review</button>
           <button role="tab" aria-selected={tab === 'moves'} onClick={() => setTab('moves')}>Moves</button>
@@ -166,7 +168,7 @@ function ReviewGame({ game }: { game: SavedGame }) {
         <NavButtons view={view} total={N} onView={onView} onFlip={() => setOrient((orient ^ 1) as 0 | 1)} />
         <div className="actions">
           <button className="btn" aria-pressed={showBest} onClick={() => setShowBest(!showBest)}><Icon.bulb />Best move</button>
-          <button className="btn" onClick={() => go('/analysis?fen=' + encodeURIComponent(fens[view]))}><Icon.analysis />Analyse</button>
+          <button className="btn" onClick={() => (analyseUrl ? window.open(analyseUrl(fens[view]), '_blank') : go('/analysis?fen=' + encodeURIComponent(fens[view])))}><Icon.analysis />Analyse</button>
           <button className="btn" onClick={copyPgn}><Icon.copy />{copied ? 'Copied' : 'PGN'}</button>
         </div>
         {complete && mistakes.length > 0 && <button className="btn primary wide" onClick={() => setRetry(true)}>Retry your mistakes ({mistakes.length})</button>}
