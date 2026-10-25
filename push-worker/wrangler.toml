@@ -1,8 +1,0 @@
-name = "blizzard-push"
-main = "worker.js"
-compatibility_date = "2026-10-01"
-
-# id хранилища: npx wrangler kv namespace create PUSH
-[[kv_namespaces]]
-binding = "PUSH"
-id = "ВСТАВЬТЕ_ID_ХРАНИЛИЩА"

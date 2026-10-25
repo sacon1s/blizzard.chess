@@ -5,7 +5,6 @@ import { useAuth } from './lib/auth';
 import { settlePending, joinGame, tcName } from './lib/online';
 import { searchPlayers, useChallenges, useRequests, dropChallenge, acceptRequest, declineRequest } from './lib/social';
 import { useSettings, settings } from './lib/store';
-import { refreshSubscription } from './lib/push';
 import { onAward, mergeRemote, ACHIEVEMENTS } from './lib/achievements';
 import { Icon } from './components/icons';
 import { AvatarImg } from './components/Avatar';
@@ -101,7 +100,6 @@ function Notifications() {
   const [achs, setAchs] = useState<string[]>([]);
   useEffect(() => onAward((id) => { setAchs((l) => [...l, id]); setTimeout(() => setAchs((l) => l.filter((x) => x !== id)), 6000); }), []);
   useEffect(() => { if (profile) mergeRemote(profile.ach); }, [profile && profile.uid]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (uid) refreshSubscription(); }, [uid]);
   // уведомления браузера, когда вкладка свёрнута
   const seen = useRef(new Set<string>());
   useEffect(() => {

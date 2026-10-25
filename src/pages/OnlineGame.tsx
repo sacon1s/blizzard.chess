@@ -4,7 +4,7 @@ import Board from '../components/Board';
 import { PlayerBar, MoveList, NavButtons, useArrowKeys } from '../components/GameParts';
 import { Icon } from '../components/icons';
 import { newPos, play, resultText, type MoveRec } from '../lib/chess';
-import { useAuth } from '../lib/auth';
+import { useAuth, meOrGuest } from '../lib/auth';
 import { startOf, rematch, sendChat, watchGame, joinGame, sendMove, claimTimeout, resign, abort, offerDraw, answerDraw, claimAbandon, presence, recordStart, settle, serverNow, movesOf, tcName, SPEED_LABEL, LEAVE_MS, type OGame } from '../lib/online';
 import { useSettings, saveGame } from '../lib/store';
 import { playSound, soundFor } from '../lib/sound';
@@ -33,12 +33,14 @@ export default function OnlineGame({ id }: { id?: string }) {
 }
 
 function Invite({ g }: { g: OGame }) {
-  const { user, profile } = useAuth();
+  const { user, profile, me, loading } = useAuth();
   const [copied, setCopied] = useState(false);
   const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
   const link = location.href;
   const host = g.host === (user && user.uid);
   const hostName = g.wName || g.bName || 'A player';
+  const canShare = typeof navigator.share === 'function';
   if (g.status === 'aborted') {
     return (
       <div className="page narrow">
@@ -47,26 +49,44 @@ function Invite({ g }: { g: OGame }) {
       </div>
     );
   }
+  const copy = () => navigator.clipboard.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600); }, () => {});
+  const share = () => navigator.share({ title: 'Blizzard Chess', text: `Play chess with me: ${tcName(g.tc)}`, url: link }).catch(() => {});
+  // войти в партию: зарегистрированным или гостем (гость — только без рейтинга)
+  async function join() {
+    setBusy(true); setErr('');
+    try {
+      const r0 = await meOrGuest();
+      if (!r0.me) { setErr(r0.err || 'Sign in to play.'); return; }
+      const r = await joinGame(g.id, r0.me);
+      if (!r0.me.guest) dropChallenge(r0.me.uid, g.id).catch(() => {});
+      if (!r.committed) setErr(g.rated && r0.me.guest ? 'This is a rated game. Sign in to play it.' : 'Someone else already joined this game.');
+    } catch { setErr('Couldn’t join. Check your connection.'); } finally { setBusy(false); }
+  }
+  const needName = !!user && !user.isAnonymous && !profile;
+  const login = () => go('/login?next=' + encodeURIComponent('/game/' + g.id));
   return (
     <div className="page narrow invite">
       <h1>{host ? 'Waiting for your friend' : `${hostName} challenges you`}</h1>
-      <p className="muted">{tcName(g.tc)} · {SPEED_LABEL[g.speed]} · casual (no rating change). {host ? (g.invited ? 'Challenge sent. The game starts when your friend accepts it. You can also send this link.' : 'Send this link. The game starts when your friend opens it and joins.') : ''}</p>
+      <p className="muted">{tcName(g.tc)} · {SPEED_LABEL[g.speed]} · {g.rated ? 'rated' : 'casual (no rating change)'}. {host ? (g.invited ? 'Challenge sent. The game starts when your friend accepts it. You can also send this link.' : 'Send this link to a friend. The game starts when they open it and join. They don’t need an account.') : ''}</p>
       {host ? (
         <>
           <div className="copy-row">
             <input readOnly value={link} onFocus={(e) => e.target.select()} aria-label="Game link" />
-            <button className="btn primary" onClick={() => navigator.clipboard.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600); }, () => {})}><Icon.copy />{copied ? 'Copied' : 'Copy'}</button>
+            <button className="btn primary" onClick={copy}><Icon.copy />{copied ? 'Copied' : 'Copy'}</button>
+            {canShare && <button className="btn" onClick={share}><Icon.share />Share</button>}
           </div>
           <span className="waiting" aria-hidden="true"><i /><i /><i /></span>
           <button className="btn ghost" onClick={() => { if (g.invited) dropChallenge(g.invited, g.id).catch(() => {}); abort(g.id).then(() => go('/')); }}>Cancel challenge</button>
         </>
-      ) : !user ? (
-        <button className="btn primary big" onClick={() => go('/login')}>Sign in to play</button>
-      ) : !profile ? (
-        <button className="btn primary big" onClick={() => go('/login')}>Choose a username to play</button>
+      ) : loading ? null : needName ? (
+        <button className="btn primary big" onClick={login}>Choose a username to play</button>
+      ) : g.rated && !profile ? (
+        <button className="btn primary big" onClick={login}>Sign in to play</button>
       ) : (
         <>
-          <button className="btn primary big" onClick={() => joinGame(g.id, profile).then((r) => { dropChallenge(profile.uid, g.id).catch(() => {}); if (!r.committed) setErr('Someone else already joined this game.'); }, () => setErr('Couldn’t join. Check your connection.'))}>Join the game</button>
+          <button className="btn primary big" disabled={busy} onClick={join}>{me ? 'Join the game' : 'Play as a guest'}</button>
+          {!me && <p className="muted small">No account needed. <button className="link" onClick={login}>Sign in</button> to keep your games and get a rating.</p>}
+          {me && me.guest && <p className="muted small">You play as {me.name}. <button className="link" onClick={login}>Create an account</button> to keep your games.</p>}
           {err && <p className="error" role="alert">{err}</p>}
         </>
       )}
@@ -263,7 +283,7 @@ function FlagOf({ uid }: { uid?: string }) {
 
 // реванш: предложить, принять предложение соперника, ждать ответа
 function RematchButton({ g }: { g: OGame }) {
-  const { profile } = useAuth();
+  const { me: profile } = useAuth();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const mine = g.rematch && profile && g.rematch.by === profile.uid;
@@ -288,7 +308,7 @@ function RematchButton({ g }: { g: OGame }) {
 
 const QUICK_PHRASES = ['Hi!', 'Good luck!', 'Have fun!', 'Good game', 'Well played', 'Thanks!', 'Oops'];
 function Chat({ g, canWrite }: { g: OGame; canWrite: boolean }) {
-  const { profile } = useAuth();
+  const { me: profile } = useAuth();
   const [text, setText] = useState('');
   const box = useRef<HTMLDivElement>(null);
   const msgs = useMemo(() => Object.values(g.chat || {}).sort((a, b) => a.t - b.t).slice(-60), [g.chat]);

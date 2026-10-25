@@ -7,7 +7,7 @@ import { Icon } from '../components/icons';
 import { BotAvatar } from '../components/BotAvatar';
 import { START_FEN } from '../lib/chess';
 import { BOTS, TIME_CONTROLS } from '../lib/bots';
-import { useAuth, useOnlineCount, speedOf, type Speed } from '../lib/auth';
+import { useAuth, useOnlineCount, speedOf, meOrGuest, type Speed } from '../lib/auth';
 import { seek, watchSeeks, createFriendGame, leaderboard, liveGames, userGames, watchGame, movesOf, parseTcStr, tcName, QUICK, SPEED_LABEL, ratingOf, type OGame } from '../lib/online';
 import { PlayerAvatar, AvatarImg } from '../components/Avatar';
 import { ArenaCards } from './Arena';
@@ -65,7 +65,7 @@ export default function Play({ initialTab }: { initialTab?: Tab }) {
           {TABS.map((t) => <button key={t.v} role="tab" aria-selected={tab === t.v} onClick={() => setTab(t.v)}>{t.label}</button>)}
         </div>
         <div className="tab-body">
-          {tab === 'online' && <OnlineTab needAccount={!loading && !profile} signedIn={!!user} seeking={seeking} onStart={start} onStop={stop} err={err} />}
+          {tab === 'online' && <OnlineTab needAccount={!loading && !profile} signedIn={!!user && !user.isAnonymous} seeking={seeking} onStart={start} onStop={stop} err={err} onTab={setTab} />}
           {tab === 'bots' && <BotsTab />}
           {tab === 'friends' && <FriendsTab />}
           {tab === 'top' && <TopTab />}
@@ -85,7 +85,7 @@ function SignInNote({ signedIn, text }: { signedIn: boolean; text: string }) {
   );
 }
 
-function OnlineTab({ needAccount, signedIn, seeking, onStart, onStop, err }: { needAccount: boolean; signedIn: boolean; seeking: string | null; onStart: (tc: string) => void; onStop: () => void; err: string }) {
+function OnlineTab({ needAccount, signedIn, seeking, onStart, onStop, err, onTab }: { needAccount: boolean; signedIn: boolean; seeking: string | null; onStart: (tc: string) => void; onStop: () => void; err: string; onTab: (t: Tab) => void }) {
   const { user, profile } = useAuth();
   const online = useOnlineCount();
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -107,6 +107,10 @@ function OnlineTab({ needAccount, signedIn, seeking, onStart, onStop, err }: { n
         })}
       </div>
       {err && <p className="error" role="alert">{err}</p>}
+      <div className="quick-row">
+        <button className="btn" onClick={() => onTab('friends')}><Icon.link />Play a friend</button>
+        <button className="btn" onClick={() => onTab('bots')}><Icon.bot />Play a bot</button>
+      </div>
       <span className="label section-gap-sm">Arenas</span>
       <ArenaCards />
       <p className="muted small tab-foot">{seeking ? 'Searching for an opponent. Click the time control again to cancel.' : 'Rated games. Ratings start at 1200.'}{online ? ` ${online} ${online === 1 ? 'player' : 'players'} online.` : ''}</p>
@@ -152,6 +156,7 @@ function BotsTab() {
 
 function FriendsTab() {
   const { user, profile, loading } = useAuth();
+  const registered = !!user && !user.isAnonymous;
   const friends = useFriends(profile ? profile.uid : null);
   const onlineSet = useOnlineSet();
   const [tc, setTc] = useState('10+0');
@@ -159,6 +164,7 @@ function FriendsTab() {
   const [q, setQ] = useState('');
   const [found, setFound] = useState<{ uid: string; name: string }[] | null>(null);
   const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
   const { query } = useRoute();
   const qWith = query.get('with');
   const [withUid, setWith] = useState<string | null>(qWith);
@@ -170,18 +176,20 @@ function FriendsTab() {
     return () => clearTimeout(t);
   }, [q]);
   const sorted = useMemo(() => (friends || []).slice().sort((a, b) => Number(onlineSet.has(b.uid)) - Number(onlineSet.has(a.uid))), [friends, onlineSet]);
+  // партия по ссылке: можно и без аккаунта (гостем, без рейтинга)
   async function create(to?: string) {
-    if (!profile) { go('/login'); return; }
+    setErr(''); setBusy(true);
     try {
-      const gid = await createFriendGame(tc, profile, color, to);
-      if (to) await sendChallenge(to, gid, profile, tc);
+      const r = await meOrGuest();
+      if (!r.me) { if (registered) go('/login'); else setErr(r.err || 'Sign in to play.'); return; }
+      const gid = await createFriendGame(tc, r.me, color, to);
+      if (to) await sendChallenge(to, gid, r.me, tc);
       go('/game/' + gid);
-    } catch { setErr('Couldn’t create the game. Check your connection.'); }
+    } catch { setErr('Couldn’t create the game. Check your connection.'); } finally { setBusy(false); }
   }
-  if (!loading && !profile) return <SignInNote signedIn={!!user} text="Sign in to add friends and challenge them." />;
   return (
     <>
-      <DailyGames uid={profile ? profile.uid : null} />
+      {profile && <DailyGames uid={profile.uid} />}
       {sel && (
         <div className="vs-friend">
           <i className={'dot' + (onlineSet.has(sel.uid) ? ' on' : '')} />
@@ -204,28 +212,35 @@ function FriendsTab() {
         </div>
       </div>
       {err && <p className="error" role="alert">{err}</p>}
-      <div className="friend-list">
-        {friends === null ? <p className="muted small">Loading…</p> : sorted.length === 0 ? (
-          <p className="muted small">No friends yet. Find players below and add them.</p>
-        ) : sorted.map((f) => (
-          <div key={f.uid} className={'friend-row' + (sel && sel.uid === f.uid ? ' on' : '')}>
-            <i className={'dot' + (onlineSet.has(f.uid) ? ' on' : '')} title={onlineSet.has(f.uid) ? 'Online' : 'Offline'} />
-            <a href={'#/profile/' + f.name}>{f.name}</a>
-            <button className="btn small-btn" aria-pressed={!!sel && sel.uid === f.uid} onClick={() => setWith(f.uid)}>Play</button>
+      {profile ? (
+        <>
+          <div className="friend-list">
+            {friends === null ? <p className="muted small">Loading…</p> : sorted.length === 0 ? (
+              <p className="muted small">No friends yet. Find players below and add them.</p>
+            ) : sorted.map((f) => (
+              <div key={f.uid} className={'friend-row' + (sel && sel.uid === f.uid ? ' on' : '')}>
+                <i className={'dot' + (onlineSet.has(f.uid) ? ' on' : '')} title={onlineSet.has(f.uid) ? 'Online' : 'Offline'} />
+                <a href={'#/profile/' + f.name}>{f.name}</a>
+                <button className="btn small-btn" aria-pressed={!!sel && sel.uid === f.uid} onClick={() => setWith(f.uid)}>Play</button>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="search">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find players by name" aria-label="Find players by name" />
-        {found && (
-          <div className="search-results">
-            {found.length === 0 ? <p className="muted small">No players found.</p> : found.map((r) => <a key={r.uid} href={'#/profile/' + r.name}>{r.name}</a>)}
+          <div className="search">
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find players by name" aria-label="Find players by name" />
+            {found && (
+              <div className="search-results">
+                {found.length === 0 ? <p className="muted small">No players found.</p> : found.map((r) => <a key={r.uid} href={'#/profile/' + r.name}>{r.name}</a>)}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      ) : (
+        <p className="muted small link-note">You get a link. Send it to a friend: they open it and play, no account needed. Games by link don’t change ratings.</p>
+      )}
       {sel
-        ? <button className="btn primary big wide push" onClick={() => create(sel.uid)}><Icon.online />Challenge {sel.name}</button>
-        : <button className="btn wide push" onClick={() => create()}><Icon.plus />Create a game link</button>}
+        ? <button className="btn primary big wide push" disabled={busy} onClick={() => create(sel.uid)}><Icon.online />Challenge {sel.name}</button>
+        : <button className={'btn wide push' + (profile ? '' : ' primary big')} disabled={busy} onClick={() => create()}><Icon.link />Create a game link</button>}
+      {!loading && !profile && <SignInNote signedIn={registered} text="Sign in to add friends and challenge them by name." />}
     </>
   );
 }

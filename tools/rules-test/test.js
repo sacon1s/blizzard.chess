@@ -112,6 +112,21 @@ ok('победа в арене +2', (d) => d.as(A).write(`/arenas/${aid}/players
 no('очки без партии', (d) => d.as(A).write(`/arenas/${aid}/players/alice`, { name: 'Alice', score: 0, streak: 0, games: 0, rating: 1200, sheet: '' }).newDatabase.as(A).write(`/arenas/${aid}/players/alice`, { name: 'Alice', score: 4, streak: 1, games: 0, rating: 1200, sheet: '2' }));
 no('арена с выдуманным id', W(A, '/arenas/x/players/alice', { name: 'Alice', score: 0, streak: 0, games: 0, rating: 1200, sheet: '' }));
 
+// гости (анонимный вход): только партии без рейтинга
+const G = { uid: 'guest1', provider: 'anonymous' };
+ok('гость входит в открытую партию', W(G, '/games/open1', { ...base.games.open1, black: 'guest1', bName: 'Guest1234', status: 'started' }));
+ok('гость создаёт партию по ссылке', W(G, '/games/gg', game({ white: 'guest1', wName: 'Guest1234', host: 'guest1', status: 'open', rated: false })));
+no('гость создаёт рейтинговую партию', W(G, '/games/gg', game({ white: 'guest1', wName: 'Guest1234', host: 'guest1', status: 'open', rated: true })));
+no('гость в рейтинговой партии', (d) => d.as(A).write('/games/r2', game({ white: 'alice', host: 'alice', status: 'open', rated: true })).newDatabase.as(G).write('/games/r2', game({ white: 'alice', host: 'alice', black: 'guest1', status: 'started', rated: true })));
+no('гость создаёт профиль', (d) => d.as(G).write('/users/guest1', user('Guest')));
+no('гость занимает имя', W(G, '/names/guest', 'guest1'));
+no('гость в очереди рейтинговых партий', W(G, '/seeks/3+0', { guest1: { name: 'Guest', rating: 1200, t: 1 } }));
+no('гость шлёт заявку в друзья', W(G, '/friendRequests/bob/guest1', { name: 'Guest', t: 1 }));
+no('гость в арене', W(G, `/arenas/${aid}/players/guest1`, { name: 'Guest', score: 0, streak: 0, games: 0, rating: 1200, sheet: '' }));
+ok('гость: своя история партий', W(G, '/userGames/guest1/open1', { opp: 'alice', oppName: 'Alice', color: 1, tc: '3+0', speed: 'blitz', rated: false, date: 1, pending: true }));
+ok('гость пишет в чат своей партии', (d) => d.as(G).write('/games/open1', { ...base.games.open1, black: 'guest1', bName: 'Guest1234', status: 'started' }).newDatabase.as(G).write('/games/open1/chat/m1', { u: 'guest1', n: 'Guest1234', m: 'hi', t: 1 }));
+ok('гость на сайте', W(G, '/online/guest1', 1));
+
 // история и прочее
 ok('своя история партий', W(A, '/userGames/alice/g1', { opp: 'bob', oppName: 'Bob', color: 0, tc: '3+0', speed: 'blitz', rated: true, date: 1, pending: true }));
 no('чужая история', W(B, '/userGames/alice/g1', { opp: 'bob' }));

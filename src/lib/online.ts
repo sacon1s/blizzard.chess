@@ -3,8 +3,7 @@
 //   games/<id> — партия;  userGames/<uid>/<id> — история игрока (пишет только он сам).
 // Время считается по часам сервера (.info/serverTimeOffset); ходы записываются транзакцией.
 import { ref, push, set, get, onValue, runTransaction, onDisconnect, remove, update, query, orderByChild, limitToLast, equalTo, serverTimestamp } from 'firebase/database';
-import { db, auth } from './firebase';
-import { notifyPlayer } from './push';
+import { db } from './firebase';
 import { speedOf, DEFAULT_RATING, type Profile, type Speed } from './auth';
 import { START_FEN, posAt, play, gameEnd, newPos } from './chess';
 
@@ -119,7 +118,8 @@ export async function createFriendGame(tc: string, me: Profile, color: 'white' |
   const white = color === 'white' || (color === 'random' && Math.random() < 0.5);
   const sp = speedOf(parseTcStr(tc).base, parseTcStr(tc).inc);
   const gref = push(ref(db, 'games'));
-  const seat = white ? { white: me.uid, wName: me.name, wRating: ratingOf(me, sp) } : { black: me.uid, bName: me.name, bRating: ratingOf(me, sp) };
+  const r = me.guest ? {} : white ? { wRating: ratingOf(me, sp) } : { bRating: ratingOf(me, sp) }; // у гостя рейтинга нет
+  const seat = white ? { white: me.uid, wName: me.name, ...r } : { black: me.uid, bName: me.name, ...r };
   await set(gref, { ...newGameData(tc, !!o.rated, o), ...seat, host: me.uid, status: 'open', ...(invited ? { invited } : {}) });
   return gref.key!;
 }
@@ -127,24 +127,15 @@ export function joinGame(gid: string, me: Profile) {
   return runTransaction(ref(db, 'games/' + gid), (g: OGame | null) => {
     if (!g) return g;
     if (g.status !== 'open' || g.host === me.uid) return;
+    if (me.guest && g.rated) return; // гость играет только без рейтинга
     const r = ratingOf(me, g.speed);
-    if (!g.white) { g.white = me.uid; g.wName = me.name; g.wRating = r; } else if (!g.black) { g.black = me.uid; g.bName = me.name; g.bRating = r; } else return;
+    if (!g.white) { g.white = me.uid; g.wName = me.name; if (!me.guest) g.wRating = r; } else if (!g.black) { g.black = me.uid; g.bName = me.name; if (!me.guest) g.bRating = r; } else return;
     g.status = 'started';
     return g;
   });
 }
 
 // ---------------------------------------------------------------- ходы и конец партии
-// партия по переписке: после своего хода (или конца партии) уведомить соперника, даже если сайт у него закрыт
-type TxResult = { committed: boolean; snapshot: { key: string | null; val: () => OGame | null } };
-function tell<T extends TxResult>(r: T, onlyEnd = false): T {
-  const me = auth.currentUser && auth.currentUser.uid, g = r.committed ? r.snapshot.val() : null;
-  if (!g || !g.daily || !me || !r.snapshot.key) return r;
-  const opp = g.white === me ? g.black : g.black === me ? g.white : undefined;
-  if (g.status === 'over') notifyPlayer('end', opp, r.snapshot.key);
-  else if (!onlyEnd && g.status === 'started') notifyPlayer('move', opp, r.snapshot.key);
-  return r;
-}
 export function sendMove(gid: string, uci: string, color: 0 | 1) {
   return runTransaction(ref(db, 'games/' + gid), (g: OGame | null) => {
     if (!g) return g;
@@ -168,7 +159,7 @@ export function sendMove(gid: string, uci: string, color: 0 | 1) {
     const end = gameEnd(pos);
     if (end) { g.status = 'over'; g.result = end.result; g.reason = end.reason; }
     return g;
-  }).then((r) => tell(r));
+  });
 }
 function finishOnTime(g: OGame, ms: string[], loser: 0 | 1) {
   g.clock[loser === 0 ? 'w' : 'b'] = 0;
@@ -190,7 +181,7 @@ export function claimTimeout(gid: string) {
     const left = g.clock[side === 0 ? 'w' : 'b'] - (serverNow() - g.clock.last);
     if (left > 0) return;
     return finishOnTime(g, ms, side);
-  }).then((r) => tell(r, true));
+  });
 }
 export function resign(gid: string, color: 0 | 1) {
   return runTransaction(ref(db, 'games/' + gid), (g: OGame | null) => {
@@ -198,7 +189,7 @@ export function resign(gid: string, color: 0 | 1) {
     if (g.status !== 'started') return;
     g.status = 'over'; g.result = color === 0 ? '0-1' : '1-0'; g.reason = 'resign';
     return g;
-  }).then((r) => tell(r, true));
+  });
 }
 export function abort(gid: string) {
   return runTransaction(ref(db, 'games/' + gid), (g: OGame | null) => {
@@ -215,7 +206,7 @@ export function answerDraw(gid: string, uid: string, accept: boolean) {
     if (accept) { g.status = 'over'; g.result = '1/2-1/2'; g.reason = 'agreement'; }
     g.drawOffer = null;
     return g;
-  }).then((r) => tell(r, true));
+  });
 }
 export const LEAVE_MS = 30000;
 // соперник ушёл больше 30 секунд назад: победа (или отмена, если партия толком не началась)
@@ -229,7 +220,7 @@ export function claimAbandon(gid: string, color: 0 | 1) {
     if (movesOf(g).length < 2) { g.status = 'aborted'; return g; }
     g.status = 'over'; g.result = color === 0 ? '1-0' : '0-1'; g.reason = 'abandon';
     return g;
-  }).then((r) => tell(r, true));
+  });
 }
 
 // присутствие в партии: пока страница открыта — «на месте»
@@ -267,7 +258,10 @@ export async function settle(g: OGame, uid: string): Promise<number | null> {
   }
   const score = g.result === '1/2-1/2' ? 0.5 : (g.result === '1-0') === (color === 0) ? 1 : 0;
   const us = await get(ref(db, 'users/' + uid));
-  if (!us.exists()) return null;
+  if (!us.exists()) { // гость: рейтинга и счёта нет, только итог в своей истории
+    if (!g.rated) await update(ugRef, { pending: null, result: g.result, reason: g.reason || '', delta: 0, ...(op ? { op } : {}) }).catch(() => {});
+    return g.rated ? null : 0;
+  }
   const u = us.val();
   const n = (u.games && u.games[g.speed]) || 0;
   const my = (color === 0 ? g.wRating : g.bRating) || DEFAULT_RATING, opp = (color === 0 ? g.bRating : g.wRating) || DEFAULT_RATING;

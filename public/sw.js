@@ -19,26 +19,3 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(fetch(req).then((r) => put(req, r)).catch(() => caches.match(req)));
   }
 });
-
-// уведомление с сервера (push-worker): ход в партии по переписке, вызов, заявка в друзья.
-// Если сайт открыт и на виду — там и так всё видно, второе уведомление не нужно.
-self.addEventListener('push', (e) => {
-  let d = {};
-  try { d = e.data ? e.data.json() : {}; } catch (_) { /* */ }
-  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
-    if (cs.some((c) => c.visibilityState === 'visible')) return;
-    return self.registration.showNotification(d.title || 'Blizzard Chess', {
-      body: d.body || '', icon: 'icon-192.png', badge: 'icon-192.png', tag: d.tag || undefined, data: { url: d.url || self.registration.scope },
-    });
-  }));
-});
-// нажали на уведомление: открыть сайт (или уже открытую вкладку) на нужной партии
-self.addEventListener('notificationclick', (e) => {
-  e.notification.close();
-  const url = (e.notification.data && e.notification.data.url) || self.registration.scope;
-  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
-    const c = cs.find((x) => x.url.startsWith(self.registration.scope));
-    if (c) { c.postMessage({ open: url }); return c.focus().catch(() => {}); }
-    return self.clients.openWindow(url);
-  }));
-});

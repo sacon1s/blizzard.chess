@@ -4,7 +4,7 @@
       ".read": true,
       ".indexOn": ["ratings/bullet", "ratings/blitz", "ratings/rapid", "ratings/classical"],
       "$uid": {
-        ".write": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && auth.provider !== 'anonymous'",
         ".validate": "newData.hasChildren(['name', 'ratings'])",
         "name": {
           ".validate": "newData.isString() && root.child('names').child(newData.val().toLowerCase()).val() === $uid"
@@ -65,7 +65,7 @@
     "names": {
       ".read": true,
       "$name": {
-        ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid",
+        ".write": "auth != null && auth.provider !== 'anonymous' && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid",
         ".validate": "$name.matches(/^[a-z0-9_-]{3,20}$/)"
       }
     },
@@ -79,7 +79,7 @@
     "seeks": {
       ".read": "auth != null",
       "$key": {
-        ".write": "auth != null",
+        ".write": "auth != null && auth.provider !== 'anonymous'",
         "$uid": {
           ".validate": "newData.hasChildren(['name', 'rating', 't']) && newData.child('name').isString() && newData.child('rating').isNumber() && (data.exists() || $uid === auth.uid)"
         }
@@ -95,7 +95,7 @@
       ".read": true,
       ".indexOn": ["status"],
       "$gid": {
-        ".write": "auth != null && newData.exists() && (data.exists() ? (data.child('white').val() === auth.uid || data.child('black').val() === auth.uid || data.child('status').val() === 'open') : (newData.child('white').val() === auth.uid || newData.child('black').val() === auth.uid))",
+        ".write": "auth != null && newData.exists() && (auth.provider !== 'anonymous' || newData.child('rated').val() === false) && (data.exists() ? (data.child('white').val() === auth.uid || data.child('black').val() === auth.uid || data.child('status').val() === 'open') : (newData.child('white').val() === auth.uid || newData.child('black').val() === auth.uid))",
         ".validate": "newData.hasChildren(['tc', 'status', 'clock']) && (!data.child('white').exists() || newData.child('white').val() === data.child('white').val()) && (!data.child('black').exists() || newData.child('black').val() === data.child('black').val()) && (!data.child('result').exists() || newData.child('result').val() === data.child('result').val())",
         "white": {
           ".validate": "newData.isString() && (data.exists() || newData.val() === auth.uid || !data.parent().exists())"
@@ -169,7 +169,7 @@
         ".read": "auth != null && auth.uid === $to",
         "$from": {
           ".read": "auth != null && (auth.uid === $from || auth.uid === $to)",
-          ".write": "auth != null && (auth.uid === $from || (auth.uid === $to && !newData.exists()))",
+          ".write": "auth != null && ((auth.uid === $from && auth.provider !== 'anonymous') || (auth.uid === $to && !newData.exists()))",
           ".validate": "newData.hasChildren(['name', 't']) && $from !== $to"
         }
       }
@@ -179,7 +179,7 @@
         ".read": "auth != null && auth.uid === $to",
         "$gid": {
           ".read": "auth != null && data.child('from').val() === auth.uid",
-          ".write": "auth != null && (newData.exists() ? (newData.child('from').val() === auth.uid && root.child('games').child($gid).child('host').val() === auth.uid) : (auth.uid === $to || data.child('from').val() === auth.uid))",
+          ".write": "auth != null && (newData.exists() ? (auth.provider !== 'anonymous' && newData.child('from').val() === auth.uid && root.child('games').child($gid).child('host').val() === auth.uid) : (auth.uid === $to || data.child('from').val() === auth.uid))",
           ".validate": "newData.hasChildren(['from', 'name', 'tc', 't'])"
         }
       }
@@ -189,7 +189,7 @@
       "$aid": {
         "players": {
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid && $aid.matches(/^(blitz|bullet)-[0-9]{10}$/)",
+            ".write": "auth != null && auth.uid === $uid && auth.provider !== 'anonymous' && $aid.matches(/^(blitz|bullet)-[0-9]{10}$/)",
             ".validate": "newData.hasChildren(['name', 'score', 'games'])",
             "score": {
               ".validate": "newData.isNumber() && (!data.exists() ? newData.val() === 0 : (newData.val() === data.val() || (newData.val() > data.val() && newData.val() <= data.val() + 4 && newData.parent().child('games').val() === data.parent().child('games').val() + 1)))"

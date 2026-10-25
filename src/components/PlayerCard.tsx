@@ -1,7 +1,7 @@
 // Карточка игрока во время партии (по щелчку на имя или аватар): аватар, ник, страна, рейтинги, итоги,
 // «Open profile» — профиль в новой вкладке, чтобы не уходить из партии.
 import { useEffect, useRef, useState } from 'react';
-import { getProfile, useAuth, type Profile as P, type Speed } from '../lib/auth';
+import { getProfile, useAuth, guestName, type Profile as P, type Speed } from '../lib/auth';
 import { SPEED_LABEL } from '../lib/online';
 import { useOnlineSet } from '../lib/social';
 import { AvatarImg, Flag } from './Avatar';
@@ -35,7 +35,12 @@ export function PlayerCard({ uid, speed, place, onClose }: { uid: string; speed?
   const href = p ? `${base}#/profile/${encodeURIComponent(p.name)}` : '#';
   return (
     <div className={'player-card ' + place} ref={box} role="dialog" aria-label={p ? p.name : 'Player'}>
-      {p === undefined ? <p className="muted small">Loading…</p> : p === null ? <p className="muted small">This player’s profile couldn’t be loaded.</p> : (
+      {p === undefined ? <p className="muted small">Loading…</p> : p === null ? (
+        <div className="pc-head">
+          <span className="ava-wrap"><AvatarImg size={56} />{online && <i className="ava-online" />}</span>
+          <div><b className="pc-name">{guestName(uid)}</b><span className="pc-meta">Guest, playing without an account</span></div>
+        </div>
+      ) : (
         <>
           <div className="pc-head">
             <span className="ava-wrap"><AvatarImg avatar={p.avatar} photo={p.photo} size={56} />{online && <i className="ava-online" />}</span>

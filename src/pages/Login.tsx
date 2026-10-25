@@ -1,7 +1,7 @@
 // Вход и регистрация: почта и пароль или Google; после первого входа — выбор имени игрока.
 import { useEffect, useState } from 'react';
 import { useAuth, signInGoogle, signInEmail, signUpEmail, createProfile, nameError, logOut } from '../lib/auth';
-import { go } from '../lib/router';
+import { go, useRoute } from '../lib/router';
 
 function authMessage(e: any): string {
   const code = String((e && e.code) || '');
@@ -24,15 +24,19 @@ function authMessage(e: any): string {
 }
 
 export default function Login() {
-  const { user, profile, loading } = useAuth();
-  const [mode, setMode] = useState<'in' | 'up'>('in');
+  const { user, profile, me, loading } = useAuth();
+  const guest = !!user && user.isAnonymous;
+  const [mode, setMode] = useState<'in' | 'up'>(guest ? 'up' : 'in');
+  const { query } = useRoute();
+  const nq = query.get('next') || '';
+  const next = /^\/[A-Za-z0-9/_?=&.-]*$/.test(nq) ? nq : '';
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
   const [name, setName] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { if (profile) go('/profile/' + profile.name); }, [profile]);
+  useEffect(() => { if (profile) go(next || '/profile/' + profile.name); }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function run(f: () => Promise<unknown>) {
     setBusy(true); setErr('');
@@ -50,7 +54,7 @@ export default function Login() {
 
   if (loading) return <div className="page narrow"><p className="muted">Loading…</p></div>;
 
-  if (user && !profile) {
+  if (user && !guest && !profile) {
     return (
       <div className="page narrow auth">
         <h1>Choose your name</h1>
@@ -69,7 +73,9 @@ export default function Login() {
   return (
     <div className="page narrow auth">
       <h1>{mode === 'in' ? 'Sign in' : 'Create an account'}</h1>
-      <p className="muted">An account lets you play rated games online and keeps your rating. Bots, review and analysis work without one.</p>
+      {guest && me
+        ? <p className="muted">You’re playing as {me.name}. Create an account to keep your games, get a rating and add friends.</p>
+        : <p className="muted">An account lets you play rated games online and keeps your rating. Bots, games by link, review and analysis work without one.</p>}
       <button className="btn big google" onClick={() => run(signInGoogle)} disabled={busy}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3Z" /><path fill="currentColor" opacity=".8" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22Z" /><path fill="currentColor" opacity=".6" d="M6.4 14a6 6 0 0 1 0-3.9V7.5H3.1a10 10 0 0 0 0 9.1L6.4 14Z" /><path fill="currentColor" opacity=".9" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.5L6.4 10C7.2 7.7 9.4 6 12 6Z" /></svg>
         Continue with Google
