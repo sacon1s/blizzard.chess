@@ -4,7 +4,7 @@ import Board from '../components/Board';
 import { MoveList, NavButtons, useArrowKeys, EvalBar, PlayerBar } from '../components/GameParts';
 import { Icon } from '../components/icons';
 import ClsSvg, { CLS_LABEL as MOVE_CLASS_LABELS } from '../components/ClsIcon';
-import { START_FEN, newPos, moveNumber, toPgn, REASONS } from '../lib/chess';
+import { E, START_FEN, newPos, moveNumber, toPgn, REASONS } from '../lib/chess';
 import { ref, get } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { useAuth, uidByName } from '../lib/auth';
@@ -166,7 +166,7 @@ export function ReviewGame({ game, onBack, analyseUrl }: { game: SavedGame; onBa
           <button role="tab" aria-selected={tab === 'moves'} onClick={() => setTab('moves')}>Moves</button>
         </div>
         <div className={'progress' + (complete ? ' done' : '')} aria-label="Analysis progress">
-          <span>{complete ? 'Analysed by Blizzard 0.9' : `Analysing move ${Math.max(0, done - 1)} of ${N}`}</span>
+          <span>{complete ? `Analysed by Blizzard ${E.VERSION || ''}` : `Analysing move ${Math.max(0, done - 1)} of ${N}`}</span>
           <i style={{ width: (100 * done / (N + 1)).toFixed(1) + '%' }} />
         </div>
         <Coach k={view - 1} moves={moves} entries={entries} c={c} result={game.result} reason={game.reason} total={N} />
