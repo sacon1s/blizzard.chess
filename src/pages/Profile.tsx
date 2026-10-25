@@ -9,6 +9,7 @@ import { Icon } from '../components/icons';
 import { AvatarImg, Flag, AVATAR_COLORS, AVATAR_PIECES } from '../components/Avatar';
 import { COUNTRIES } from '../lib/countries';
 import { award, ACHIEVEMENTS, achStore } from '../lib/achievements';
+import { AchBadge } from '../components/AchIcon';
 import { ref, update } from 'firebase/database';
 import { db } from '../lib/firebase';
 
@@ -309,7 +310,7 @@ function Achievements({ got }: { got: Record<string, number> }) {
       <div className="ach-grid">
         {ACHIEVEMENTS.map((a) => (
           <div key={a.id} className={'ach' + (got[a.id] ? ' got' : '')} title={a.text}>
-            <span className="ach-badge">{a.glyph}</span>
+            <AchBadge id={a.id} got={!!got[a.id]} />
             <span><b>{a.name}</b><span>{a.text}</span></span>
           </div>
         ))}

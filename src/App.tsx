@@ -7,6 +7,7 @@ import { searchPlayers, useChallenges, useRequests, dropChallenge, acceptRequest
 import { useSettings, settings } from './lib/store';
 import { onAward, mergeRemote, ACHIEVEMENTS } from './lib/achievements';
 import { Icon } from './components/icons';
+import { AchBadge } from './components/AchIcon';
 import Play from './pages/Play';
 import BotGame from './pages/BotGame';
 import Review from './pages/Review';
@@ -112,7 +113,7 @@ function Notifications() {
   }, [challenges, requests]);
   const achToasts = achs.map((id) => {
     const a = ACHIEVEMENTS.find((x) => x.id === id);
-    return a ? <div key={'a' + id} className="toast ach-toast"><p><b>Achievement unlocked: {a.name}</b></p><p className="muted small">{a.text}</p></div> : null;
+    return a ? <div key={'a' + id} className="toast ach-toast"><AchBadge id={a.id} size={44} /><div><p><b>Achievement unlocked: {a.name}</b></p><p className="muted small">{a.text}</p></div></div> : null;
   });
   if (!profile) return achToasts.length ? <div className="toasts">{achToasts}</div> : null;
   const items = [
