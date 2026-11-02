@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "build:review": "tsc && sh tools/build-review.sh"
+    "build:review": "tsc && sh tools/build-review.sh",
+    "close": "node tools/close-site.cjs"
   },
   "license": "GPL-3.0-or-later",
   "dependencies": {

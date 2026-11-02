@@ -4,6 +4,8 @@ Free chess site: play Blizzard bots of every strength, review your games with th
 
 Live: https://sacon1s.github.io/blizzard.chess/
 
+> **Closed for a rebuild.** The live site shows a "closed" page from `maintenance/` (`npm run close`). To open the site again, run `npm run build`: it rebuilds the app into `docs/`.
+
 The engine is [Blizzard](https://github.com/sacon1s/blizzard) 0.9, running in the browser.
 
 ## Develop
